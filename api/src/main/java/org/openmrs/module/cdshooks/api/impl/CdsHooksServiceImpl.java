@@ -5,11 +5,13 @@ import org.openmrs.Allergy;
 import org.openmrs.AllergyReaction;
 import org.openmrs.Patient;
 import org.openmrs.api.PatientService;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.cdshooks.api.AllergyMatcher;
 import org.openmrs.module.cdshooks.api.CdsHooksService;
 import org.openmrs.module.cdshooks.model.AllergyMatch;
 import org.openmrs.module.cdshooks.model.CdsHooksRequest;
 import org.openmrs.module.cdshooks.model.CdsHooksResponse;
+import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -46,23 +48,56 @@ public class CdsHooksServiceImpl implements CdsHooksService {
             return response;
         }
 
-        Patient patient = patientService.getPatientByUuid(patientUuid);
-        if (patient == null) {
+        // Spike shortcut: grant the minimum read privileges this service needs
+        // for the duration of the call. This lets basic-auth (and currently
+        // anonymous) CDS-Hooks invocations work without requiring a full
+        // OpenMRS session. The production path is bearer-token auth per the
+        // CDS-Hooks 2.0 security spec — see docs/SPIKE_JOURNAL.md.
+        boolean privilegesAdded = addProxyPrivileges();
+        try {
+            Patient patient = patientService.getPatientByUuid(patientUuid);
+            if (patient == null) {
+                return response;
+            }
+
+            List<AllergyMatcher.AllergyInput> allergyInputs =
+                    toAllergyInputs(patientService.getAllergies(patient));
+            if (allergyInputs.isEmpty()) {
+                return response;
+            }
+
+            List<AllergyMatch> allMatches = new ArrayList<>();
+            for (AllergyMatcher.DrugInput drug : drugs) {
+                allMatches.addAll(matcher.match(drug, allergyInputs));
+            }
+
+            response.setCards(allMatches.stream().map(this::toCard).collect(Collectors.toList()));
             return response;
+        } finally {
+            if (privilegesAdded) removeProxyPrivileges();
         }
+    }
 
-        List<AllergyMatcher.AllergyInput> allergyInputs = toAllergyInputs(patientService.getAllergies(patient));
-        if (allergyInputs.isEmpty()) {
-            return response;
+    private static boolean addProxyPrivileges() {
+        try {
+            Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+            Context.addProxyPrivilege(PrivilegeConstants.GET_ALLERGIES);
+            Context.addProxyPrivilege(PrivilegeConstants.GET_CONCEPTS);
+            return true;
+        } catch (Exception e) {
+            // No user context — typical in unit tests. Skip privilege management.
+            return false;
         }
+    }
 
-        List<AllergyMatch> allMatches = new ArrayList<>();
-        for (AllergyMatcher.DrugInput drug : drugs) {
-            allMatches.addAll(matcher.match(drug, allergyInputs));
+    private static void removeProxyPrivileges() {
+        try {
+            Context.removeProxyPrivilege(PrivilegeConstants.GET_CONCEPTS);
+            Context.removeProxyPrivilege(PrivilegeConstants.GET_ALLERGIES);
+            Context.removeProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+        } catch (Exception ignored) {
+            // best-effort cleanup
         }
-
-        response.setCards(allMatches.stream().map(this::toCard).collect(Collectors.toList()));
-        return response;
     }
 
     private List<AllergyMatcher.AllergyInput> toAllergyInputs(Allergies allergies) {

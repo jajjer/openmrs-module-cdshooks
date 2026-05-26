@@ -66,14 +66,31 @@ public class AllergyMatcherImpl implements AllergyMatcher {
         return matches;
     }
 
+    /**
+     * Resolve a list of seed SCTIDs to a deduplicated set of "substance
+     * candidates" for matching.
+     *
+     * <p>Strategy: for each seed, query the bridging attribute (Causative
+     * agent on allergen findings, Has active ingredient on drug products).
+     * If the seed has bridging values, use those. If it has none, fall back
+     * to the seed itself — this handles the case where an OpenMRS concept is
+     * mapped directly to a SNOMED substance code rather than to a finding or
+     * product. The fall-back is conditional rather than unconditional to
+     * avoid spurious matches between root-of-hierarchy concepts (e.g., an
+     * allergen finding listing "Pharmaceutical / biologic product" as one of
+     * its causative agents would otherwise trivially subsume every drug
+     * product).
+     */
     private Set<SnomedConcept> expandToSubstances(List<String> seedSctids, String attributeSctid) {
         Set<SnomedConcept> out = new LinkedHashSet<>();
         if (seedSctids == null) return out;
         for (String sctid : seedSctids) {
-            // Include the seed itself: handles direct substance mappings.
-            out.add(new SnomedConcept(sctid, null));
-            // Plus any values of the bridging attribute (Causative agent / Has active ingredient).
-            out.addAll(snowstorm.getAttributeValues(sctid, attributeSctid));
+            List<SnomedConcept> bridged = snowstorm.getAttributeValues(sctid, attributeSctid);
+            if (bridged.isEmpty()) {
+                out.add(new SnomedConcept(sctid, null));
+            } else {
+                out.addAll(bridged);
+            }
         }
         return out;
     }
