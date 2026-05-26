@@ -54,6 +54,7 @@ public class CdsHooksServiceImplTest {
     private final CdsHooksRequestParser parser = new CdsHooksRequestParser();
     private final SnomedMappingExtractor snomedExtractor = new SnomedMappingExtractor();
     private final SeverityMapper severityMapper = new SeverityMapper();
+    private final CdsAuditLogger auditLogger = new CdsAuditLogger();
 
     @InjectMocks private CdsHooksServiceImpl service;
 
@@ -65,6 +66,7 @@ public class CdsHooksServiceImplTest {
         setField(service, "parser", parser);
         setField(service, "snomedExtractor", snomedExtractor);
         setField(service, "severityMapper", severityMapper);
+        setField(service, "auditLogger", auditLogger);
     }
 
     @Test
@@ -85,6 +87,29 @@ public class CdsHooksServiceImplTest {
         CdsHooksResponse resp = service.evaluateDrugAllergy(buildRequest(PATIENT_UUID, "27658006"));
 
         assertThat(resp.getCards(), is(empty()));
+    }
+
+    @Test
+    public void matcherThrows_returnsUnavailableCard() throws Exception {
+        Patient patient = new Patient();
+        when(patientService.getPatientByUuid(PATIENT_UUID)).thenReturn(patient);
+
+        Allergies allergies = new Allergies();
+        allergies.add(buildAllergy("Allergy to penicillin", "Severe", "Hepatotoxicity"));
+        when(patientService.getAllergies(patient)).thenReturn(allergies);
+
+        // Simulate the matching algorithm failing — e.g., Snowstorm unreachable.
+        when(matcher.match(any(), any())).thenThrow(new RuntimeException("Snowstorm unreachable"));
+
+        CdsHooksResponse resp = service.evaluateDrugAllergy(buildRequest(PATIENT_UUID, "27658006"));
+
+        // Fail-open: one info-level Card explaining the check is unavailable.
+        // Silent empty response would be misinterpreted as "no warnings".
+        assertThat(resp.getCards(), hasSize(1));
+        CdsHooksResponse.Card card = resp.getCards().get(0);
+        assertThat(card.indicator, is("info"));
+        assertThat(card.summary, startsWith("ℹ Allergy check unavailable"));
+        assertThat(card.detail, org.hamcrest.Matchers.containsString("Verify recorded allergies"));
     }
 
     @Test

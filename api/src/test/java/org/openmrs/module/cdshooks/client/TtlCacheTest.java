@@ -69,4 +69,49 @@ public class TtlCacheTest {
 
         assertThat(calls.get(), is(1));
     }
+
+    @Test
+    public void respectsMaxEntriesBound() {
+        // Cap at 3 entries; insert 5 distinct keys.
+        TtlCache<String, String> cache = new TtlCache<>(60_000, 3);
+        for (int i = 0; i < 5; i++) {
+            final int v = i;
+            cache.get("k" + v, k -> "v" + v);
+        }
+        assertThat(cache.size(), is(3));
+    }
+
+    @Test
+    public void lruEvictionRetainsRecentlyAccessed() {
+        TtlCache<String, String> cache = new TtlCache<>(60_000, 2);
+        cache.get("a", k -> "alpha");
+        cache.get("b", k -> "beta");
+        // Touch a to make it most recently used. Insert c — b is the LRU and
+        // should be evicted, not a.
+        cache.get("a", k -> { throw new AssertionError("should be cached"); });
+        cache.get("c", k -> "charlie");
+
+        AtomicInteger calls = new AtomicInteger();
+        // a still cached
+        cache.get("a", k -> { calls.incrementAndGet(); return "alpha"; });
+        // c still cached
+        cache.get("c", k -> { calls.incrementAndGet(); return "charlie"; });
+        // b evicted — loader fires
+        cache.get("b", k -> { calls.incrementAndGet(); return "beta"; });
+
+        assertThat(calls.get(), is(1));
+        assertThat(cache.size(), is(2));
+    }
+
+    @Test
+    public void invalidMaxEntries_rejected() {
+        try {
+            new TtlCache<String, String>(60_000, 0);
+            org.junit.Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException ignored) { /* ok */ }
+        try {
+            new TtlCache<String, String>(60_000, -1);
+            org.junit.Assert.fail("expected IllegalArgumentException");
+        } catch (IllegalArgumentException ignored) { /* ok */ }
+    }
 }

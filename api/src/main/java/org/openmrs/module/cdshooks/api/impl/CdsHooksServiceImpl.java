@@ -12,6 +12,8 @@ import org.openmrs.module.cdshooks.model.AllergyMatch;
 import org.openmrs.module.cdshooks.model.CdsHooksRequest;
 import org.openmrs.module.cdshooks.model.CdsHooksResponse;
 import org.openmrs.util.PrivilegeConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 
 @Service("cdshooks.CdsHooksService")
 public class CdsHooksServiceImpl implements CdsHooksService {
+
+    private static final Logger log = LoggerFactory.getLogger(CdsHooksServiceImpl.class);
 
     @Autowired
     private PatientService patientService;
@@ -38,44 +42,73 @@ public class CdsHooksServiceImpl implements CdsHooksService {
     @Autowired
     private SeverityMapper severityMapper;
 
+    @Autowired
+    private CdsAuditLogger auditLogger;
+
     @Override
     public CdsHooksResponse evaluateDrugAllergy(CdsHooksRequest request) {
         CdsHooksResponse response = new CdsHooksResponse();
-
+        String hookInstance = request == null ? null : request.getHookInstance();
         String patientUuid = parser.extractPatientUuid(request);
         List<AllergyMatcher.DrugInput> drugs = parser.extractDrugs(request);
         if (patientUuid == null || drugs.isEmpty()) {
+            auditLogger.logInvocation(hookInstance, patientUuid, drugs, List.of(), CdsAuditLogger.Outcome.NO_DATA);
             return response;
         }
 
         // Spike shortcut: grant the minimum read privileges this service needs
-        // for the duration of the call. This lets basic-auth (and currently
-        // anonymous) CDS-Hooks invocations work without requiring a full
-        // OpenMRS session. The production path is bearer-token auth per the
-        // CDS-Hooks 2.0 security spec — see docs/SPIKE_JOURNAL.md.
+        // for the duration of the call. The production path is bearer-token
+        // auth that establishes a real user context — see docs/SPIKE_JOURNAL.md.
         boolean privilegesAdded = addProxyPrivileges();
+        List<AllergyMatch> allMatches = new ArrayList<>();
         try {
             Patient patient = patientService.getPatientByUuid(patientUuid);
             if (patient == null) {
+                auditLogger.logInvocation(hookInstance, patientUuid, drugs, List.of(), CdsAuditLogger.Outcome.NO_DATA);
                 return response;
             }
 
             List<AllergyMatcher.AllergyInput> allergyInputs =
                     toAllergyInputs(patientService.getAllergies(patient));
             if (allergyInputs.isEmpty()) {
+                auditLogger.logInvocation(hookInstance, patientUuid, drugs, List.of(), CdsAuditLogger.Outcome.SUCCESS);
                 return response;
             }
 
-            List<AllergyMatch> allMatches = new ArrayList<>();
             for (AllergyMatcher.DrugInput drug : drugs) {
                 allMatches.addAll(matcher.match(drug, allergyInputs));
             }
-
-            response.setCards(allMatches.stream().map(this::toCard).collect(Collectors.toList()));
+        } catch (Exception e) {
+            // Fail-open: when the algorithm can't run (terminology server
+            // unreachable, bug in our code, etc.), tell the clinician the
+            // check is unavailable rather than silently returning no Cards.
+            // A silent absence would be interpreted as "no warnings" and
+            // could mask a real allergy conflict.
+            log.warn("CDS-Hooks drug-allergy evaluation failed for patient {}: {}",
+                    patientUuid, e.getMessage());
+            response.setCards(List.of(buildUnavailableCard(e)));
+            auditLogger.logInvocation(hookInstance, patientUuid, drugs, List.of(), CdsAuditLogger.Outcome.UNAVAILABLE);
             return response;
         } finally {
             if (privilegesAdded) removeProxyPrivileges();
         }
+
+        response.setCards(allMatches.stream().map(this::toCard).collect(Collectors.toList()));
+        auditLogger.logInvocation(hookInstance, patientUuid, drugs, allMatches, CdsAuditLogger.Outcome.SUCCESS);
+        return response;
+    }
+
+    private CdsHooksResponse.Card buildUnavailableCard(Exception cause) {
+        CdsHooksResponse.Card card = new CdsHooksResponse.Card();
+        card.uuid = UUID.randomUUID().toString();
+        card.summary = "ℹ Allergy check unavailable";
+        card.detail = "The drug-allergy check could not run. Verify recorded allergies "
+                + "in the patient chart before proceeding with this order.";
+        card.indicator = "info";
+        CdsHooksResponse.Card.Source source = new CdsHooksResponse.Card.Source();
+        source.label = "OpenMRS Drug-Allergy Alert";
+        card.source = source;
+        return card;
     }
 
     private static boolean addProxyPrivileges() {

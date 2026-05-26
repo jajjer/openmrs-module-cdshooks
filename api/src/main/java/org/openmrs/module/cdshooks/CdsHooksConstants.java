@@ -9,6 +9,7 @@ public final class CdsHooksConstants {
     public static final String GP_SNOWSTORM_URL = "cdshooks.snowstormUrl";
     public static final String GP_SNOMED_SYSTEM = "cdshooks.snomedSystem";
     public static final String GP_CACHE_TTL_SECONDS = "cdshooks.cacheTtlSeconds";
+    public static final String GP_CACHE_MAX_ENTRIES = "cdshooks.cacheMaxEntries";
 
     /** HMAC secret used to verify bearer-token (HS256) signatures. Empty disables bearer auth. */
     public static final String GP_BEARER_HMAC_SECRET = "cdshooks.bearerHmacSecret";

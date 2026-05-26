@@ -73,7 +73,7 @@ public class SnowstormClient {
         if (local != null) return local;
         synchronized (this) {
             if (attributeCache == null) {
-                attributeCache = new TtlCache<>(cacheTtlMillis());
+                attributeCache = new TtlCache<>(cacheTtlMillis(), cacheMaxEntries());
             }
             return attributeCache;
         }
@@ -84,7 +84,7 @@ public class SnowstormClient {
         if (local != null) return local;
         synchronized (this) {
             if (subsumesCache == null) {
-                subsumesCache = new TtlCache<>(cacheTtlMillis());
+                subsumesCache = new TtlCache<>(cacheTtlMillis(), cacheMaxEntries());
             }
             return subsumesCache;
         }
@@ -93,6 +93,15 @@ public class SnowstormClient {
     private long cacheTtlMillis() {
         return TimeUnit.SECONDS.toMillis(parseLong(
                 gp(CdsHooksConstants.GP_CACHE_TTL_SECONDS), DEFAULT_TTL_SECONDS));
+    }
+
+    private int cacheMaxEntries() {
+        long configured = parseLong(gp(CdsHooksConstants.GP_CACHE_MAX_ENTRIES),
+                                    TtlCache.DEFAULT_MAX_ENTRIES);
+        if (configured <= 0 || configured > Integer.MAX_VALUE) {
+            return TtlCache.DEFAULT_MAX_ENTRIES;
+        }
+        return (int) configured;
     }
 
     /* -------------------- internals -------------------- */
@@ -150,6 +159,7 @@ public class SnowstormClient {
     }
 
     private JsonNode fhirGet(String url) {
+        log.debug("SnowstormClient GET {}", url);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(15))
@@ -158,15 +168,29 @@ public class SnowstormClient {
                 .build();
         try {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+            int status = response.statusCode();
+            if (status >= 200 && status < 300) {
                 return mapper.readTree(response.body());
             }
-            log.warn("Terminology server returned {} for {}", response.statusCode(), url);
-        } catch (Exception e) {
+            // 4xx is a definitive "no data" answer from the terminology server
+            // (concept doesn't exist, operation unsupported, etc.). Not a
+            // failure of the server itself — return null so the caller treats
+            // it as empty data.
+            if (status >= 400 && status < 500) {
+                log.debug("Terminology server returned {} for {} — treating as no data", status, url);
+                return null;
+            }
+            // 5xx or anything else — server is unhealthy. Surface to caller so
+            // the request handler can fail-open with an "unavailable" Card.
+            log.warn("Terminology server returned {} for {}", status, url);
+            throw new TerminologyUnavailableException("Terminology server returned " + status);
+        } catch (java.io.IOException | InterruptedException e) {
             log.warn("Terminology call failed for {}: {}", url, e.getMessage());
-            Thread.currentThread().interrupt();
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new TerminologyUnavailableException("Terminology call failed: " + e.getMessage(), e);
         }
-        return null;
     }
 
     private String baseUrl() {

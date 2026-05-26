@@ -42,6 +42,12 @@
     </globalProperty>
 
     <globalProperty>
+        <property>cdshooks.cacheMaxEntries</property>
+        <defaultValue>10000</defaultValue>
+        <description>Maximum entries per terminology cache (attribute lookups, subsumption pairs). Bounds JVM memory under sustained traffic; LRU eviction once exceeded.</description>
+    </globalProperty>
+
+    <globalProperty>
         <property>cdshooks.bearerHmacSecret</property>
         <description>HMAC secret used to verify HS256 bearer-token signatures on /ws/cds-services/*. Leave empty to disable bearer-token auth (clients can still authenticate via session cookies or basic auth).</description>
     </globalProperty>
