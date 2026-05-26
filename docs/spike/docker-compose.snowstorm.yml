@@ -1,0 +1,50 @@
+# Local Snowstorm — for when the public IHTSDO endpoint isn't enough.
+#
+# Requires a SNOMED CT release file (RF2 zip) loaded after startup:
+#   1. Register at https://www.snomed.org/ and download the International Edition release.
+#   2. Start the stack: docker compose -f docker-compose.snowstorm.yml up -d
+#   3. Wait ~30s for Elasticsearch + Snowstorm to come up.
+#   4. Import: see https://github.com/IHTSDO/snowstorm/blob/master/docs/loading-snomed.md
+#
+# FHIR endpoint will be at http://localhost:8080/fhir
+#
+# Heap and ES memory are set conservatively. Bump if you're loading the full edition.
+
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.22
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  snowstorm:
+    image: snomedinternational/snowstorm:latest
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - JAVA_OPTS=-Xms2g -Xmx4g
+    command: >
+      --elasticsearch.urls=http://elasticsearch:9200
+      --server.port=8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  es-data:

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//OpenMRS//DTD OpenMRS Config 1.6//EN"
+    "https://resources.openmrs.org/doctype/config-1.6.dtd">
+
+<module configVersion="1.6">
+
+    <id>cdshooks</id>
+    <name>CDS Hooks Module</name>
+    <version>1.0.0-SNAPSHOT</version>
+    <package>org.openmrs.module.cdshooks</package>
+    <author>OpenMRS</author>
+    <description>
+        Exposes OpenMRS as a CDS-Hooks 2.0 service host. The first service
+        bundled is a drug-allergy alert via SNOMED CT.
+    </description>
+
+    <activator>org.openmrs.module.cdshooks.CdsHooksActivator</activator>
+
+    <require_version>2.6.0</require_version>
+
+    <require_modules>
+        <require_module version="2.4.0">org.openmrs.module.fhir2</require_module>
+    </require_modules>
+
+    <!-- Global properties (must precede <servlet> per the OpenMRS config DTD) -->
+    <globalProperty>
+        <property>cdshooks.snowstormUrl</property>
+        <defaultValue>https://tx.fhir.org/r4</defaultValue>
+        <description>Base FHIR URL of the SNOMED CT terminology server (Snowstorm or compatible)</description>
+    </globalProperty>
+
+    <globalProperty>
+        <property>cdshooks.snomedSystem</property>
+        <defaultValue>http://snomed.info/sct</defaultValue>
+        <description>FHIR system URI for SNOMED CT codes</description>
+    </globalProperty>
+
+    <globalProperty>
+        <property>cdshooks.cacheTtlSeconds</property>
+        <defaultValue>3600</defaultValue>
+        <description>TTL in seconds for cached terminology lookups (causative agents, active ingredients, subsumption results)</description>
+    </globalProperty>
+
+    <!-- CDS-Hooks 2.0 service host. OpenMRS mounts this at /ms/cdsServicesServlet.
+         A forwarding filter that exposes the spec-compliant /ws/cds-services URL
+         is a planned follow-up. -->
+    <servlet>
+        <servlet-name>cdsServicesServlet</servlet-name>
+        <servlet-class>org.openmrs.module.cdshooks.web.servlet.CdsServicesServlet</servlet-class>
+    </servlet>
+
+    <mappingFiles>
+    </mappingFiles>
+
+</module>
