@@ -24,7 +24,7 @@ The matching algorithm bridges three SNOMED hierarchies:
 - **Drug products** (e.g., "Amoxicillin-containing product") via `Has active ingredient` (SCTID 127489000) → substance(s)
 - Substance × substance `$subsumes` for ingredient and class matches
 
-See the design proposal and spike notes in the parent distro's `.context/spike/` directory.
+See `docs/DESIGN.md` for the full design proposal and `docs/SPIKE_JOURNAL.md` for the spike journey.
 
 ## Module structure
 
