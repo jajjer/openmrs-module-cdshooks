@@ -5,9 +5,6 @@ The first bundled service is a **drug-allergy alert** that warns prescribers
 when an ordered drug conflicts with the patient's recorded allergies
 (ingredient or class match via SNOMED CT).
 
-> **Status:** scaffolding only. Algorithm and endpoint implementation pending.
-> Design proposal under discussion on OpenMRS Talk.
-
 ## Architecture
 
 ```
