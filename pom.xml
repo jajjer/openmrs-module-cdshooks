@@ -54,6 +54,7 @@
         <mockitoVersion>4.11.0</mockitoVersion>
         <hapiFhirVersion>6.10.5</hapiFhirVersion>
         <jacksonVersion>2.15.4</jacksonVersion>
+        <jjwtVersion>0.11.5</jjwtVersion>
     </properties>
 
     <dependencyManagement>
@@ -87,6 +88,23 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jacksonVersion}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jjwtVersion}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jjwtVersion}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jjwtVersion}</version>
+                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>ca.uhn.hapi.fhir</groupId>

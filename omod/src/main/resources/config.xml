@@ -41,6 +41,16 @@
         <description>TTL in seconds for cached terminology lookups (causative agents, active ingredients, subsumption results)</description>
     </globalProperty>
 
+    <globalProperty>
+        <property>cdshooks.bearerHmacSecret</property>
+        <description>HMAC secret used to verify HS256 bearer-token signatures on /ws/cds-services/*. Leave empty to disable bearer-token auth (clients can still authenticate via session cookies or basic auth).</description>
+    </globalProperty>
+
+    <globalProperty>
+        <property>cdshooks.bearerExpectedIssuer</property>
+        <description>If set, bearer tokens must carry this value as their iss claim. Leave empty to skip issuer validation.</description>
+    </globalProperty>
+
     <!-- CDS-Hooks 2.0 service host. OpenMRS mounts this internally at
          /ms/cdsServicesServlet; the ForwardingFilter below exposes it at the
          spec-compliant /ws/cds-services URL, which is also CSRF-exempt by
@@ -50,6 +60,8 @@
         <servlet-class>org.openmrs.module.cdshooks.web.servlet.CdsServicesServlet</servlet-class>
     </servlet>
 
+    <!-- Single filter that handles both URL rewriting (/ws/cds-services -> /ms/cdsServicesServlet)
+         and optional CDS-Hooks 2.0 bearer-token authentication. -->
     <filter>
         <filter-name>cdsHooksForwardingFilter</filter-name>
         <filter-class>org.openmrs.module.cdshooks.web.filter.ForwardingFilter</filter-class>

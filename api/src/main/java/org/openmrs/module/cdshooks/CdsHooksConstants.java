@@ -10,6 +10,12 @@ public final class CdsHooksConstants {
     public static final String GP_SNOMED_SYSTEM = "cdshooks.snomedSystem";
     public static final String GP_CACHE_TTL_SECONDS = "cdshooks.cacheTtlSeconds";
 
+    /** HMAC secret used to verify bearer-token (HS256) signatures. Empty disables bearer auth. */
+    public static final String GP_BEARER_HMAC_SECRET = "cdshooks.bearerHmacSecret";
+
+    /** Expected {@code iss} claim on bearer tokens. Empty disables issuer check. */
+    public static final String GP_BEARER_EXPECTED_ISSUER = "cdshooks.bearerExpectedIssuer";
+
     /** SNOMED CT attribute: a finding's causative agent. */
     public static final String SCTID_CAUSATIVE_AGENT = "246075003";
 

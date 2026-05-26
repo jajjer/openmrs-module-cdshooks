@@ -1,8 +1,17 @@
 package org.openmrs.module.cdshooks.web.filter;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.openmrs.User;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.cdshooks.CdsHooksConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.SecretKey;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -13,6 +22,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Forwards public CDS-Hooks URLs ({@code /openmrs/ws/cds-services[/...]}) to the
@@ -33,6 +43,7 @@ public class ForwardingFilter implements Filter {
 
     private static final String PUBLIC_PREFIX = "/ws/cds-services";
     private static final String INTERNAL_PREFIX = "/ms/cdsServicesServlet";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     @Override
     public void init(FilterConfig filterConfig) {}
@@ -62,6 +73,17 @@ public class ForwardingFilter implements Filter {
             return;
         }
 
+        // CDS-Hooks 2.0 bearer-token authentication (optional). When the
+        // request carries an Authorization: Bearer header, we validate the
+        // JWT here and open an OpenMRS session for the token's subject. If
+        // the header is absent or has a different scheme, we pass through
+        // so existing OpenMRS auth mechanisms (basic, session cookie) still
+        // work.
+        BearerAuthResult bearer = authenticateBearerIfPresent(req, res);
+        if (bearer == BearerAuthResult.REJECTED) {
+            return; // response already populated with 401
+        }
+
         String suffix = requestURI.substring(prefix.length());
         String newURI = contextPath + INTERNAL_PREFIX + suffix;
 
@@ -76,5 +98,91 @@ public class ForwardingFilter implements Filter {
             return;
         }
         dispatcher.forward(req, res);
+    }
+
+    /* -------------------- bearer-token auth -------------------- */
+
+    private enum BearerAuthResult {
+        ABSENT,        // no Authorization header or not Bearer scheme
+        AUTHENTICATED, // valid token, OpenMRS session opened
+        REJECTED       // token present but invalid — response already set
+    }
+
+    private BearerAuthResult authenticateBearerIfPresent(HttpServletRequest req,
+                                                          HttpServletResponse res) throws IOException {
+        String authHeader = req.getHeader("Authorization");
+        if (authHeader == null
+                || !authHeader.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            return BearerAuthResult.ABSENT;
+        }
+
+        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+        String secret = gp(CdsHooksConstants.GP_BEARER_HMAC_SECRET);
+        if (secret == null || secret.isBlank()) {
+            log.warn("Bearer token presented but {} is not configured; rejecting",
+                    CdsHooksConstants.GP_BEARER_HMAC_SECRET);
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Bearer auth not configured");
+            return BearerAuthResult.REJECTED;
+        }
+
+        String username;
+        try {
+            username = verifyAndExtractSubject(token, secret);
+        } catch (JwtException e) {
+            log.warn("Rejected bearer token: {}", e.getMessage());
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+            return BearerAuthResult.REJECTED;
+        }
+        if (username == null || username.isBlank()) {
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token has no subject");
+            return BearerAuthResult.REJECTED;
+        }
+
+        if (!openSessionAs(username)) {
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unknown user: " + username);
+            return BearerAuthResult.REJECTED;
+        }
+        return BearerAuthResult.AUTHENTICATED;
+    }
+
+    private static String verifyAndExtractSubject(String token, String secret) {
+        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        Jws<Claims> parsed = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token);
+        Claims claims = parsed.getBody();
+
+        String expectedIssuer = gp(CdsHooksConstants.GP_BEARER_EXPECTED_ISSUER);
+        if (expectedIssuer != null && !expectedIssuer.isBlank()
+                && !expectedIssuer.trim().equals(claims.getIssuer())) {
+            throw new JwtException("Issuer mismatch: " + claims.getIssuer());
+        }
+        return claims.getSubject();
+    }
+
+    private static boolean openSessionAs(String username) {
+        try {
+            Context.openSession();
+            User user = Context.getUserService().getUserByUsername(username);
+            if (user == null) {
+                Context.closeSession();
+                return false;
+            }
+            Context.becomeUser(user.getSystemId());
+            return true;
+        } catch (Exception e) {
+            log.warn("Failed to open session for {}: {}", username, e.getMessage());
+            try { Context.closeSession(); } catch (Exception ignored) {}
+            return false;
+        }
+    }
+
+    private static String gp(String key) {
+        try {
+            return Context.getAdministrationService().getGlobalProperty(key);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
