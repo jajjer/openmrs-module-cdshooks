@@ -76,7 +76,7 @@ public class CdsHooksServiceImpl implements CdsHooksService {
             if (sctids.isEmpty()) continue;
 
             inputs.add(new AllergyMatcher.AllergyInput(
-                    allergy.getAllergen().getCodedAllergen().getDisplayString(),
+                    conceptDisplay(allergy.getAllergen().getCodedAllergen()),
                     sctids,
                     severityMapper.map(allergy.getSeverity()),
                     firstReactionDisplay(allergy)));
@@ -88,8 +88,34 @@ public class CdsHooksServiceImpl implements CdsHooksService {
         List<AllergyReaction> reactions = allergy.getReactions();
         if (reactions == null || reactions.isEmpty()) return null;
         AllergyReaction r = reactions.get(0);
-        if (r.getReaction() != null) return r.getReaction().getDisplayString();
+        if (r.getReaction() != null) return conceptDisplay(r.getReaction());
         return r.getReactionNonCoded();
+    }
+
+    /**
+     * Locale-independent concept name accessor. Prefers an English name (the
+     * canonical fully-specified language for CIEL); falls back to any
+     * available name. Avoids {@link org.openmrs.Concept#getDisplayString()}
+     * and the no-arg {@code getName()}, both of which call into the OpenMRS
+     * service context for locale resolution.
+     *
+     * <p>TODO: pick up the OpenMRS default-locale global property at runtime
+     * instead of hardcoding English. For the spike this is good enough.
+     */
+    private static String conceptDisplay(org.openmrs.Concept concept) {
+        if (concept == null) return null;
+        if (concept.getNames() != null) {
+            String fallback = null;
+            for (org.openmrs.ConceptName cn : concept.getNames()) {
+                if (cn == null || cn.getName() == null) continue;
+                if (cn.getLocale() != null && "en".equals(cn.getLocale().getLanguage())) {
+                    return cn.getName();
+                }
+                if (fallback == null) fallback = cn.getName();
+            }
+            if (fallback != null) return fallback;
+        }
+        return concept.getUuid();
     }
 
     private CdsHooksResponse.Card toCard(AllergyMatch m) {

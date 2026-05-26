@@ -41,9 +41,15 @@ public class SeverityMapper {
     }
 
     private static String displayName(Concept c) {
-        if (c.getName() != null && c.getName().getName() != null) {
-            return c.getName().getName();
+        if (c.getNames() == null) return null;
+        String fallback = null;
+        for (org.openmrs.ConceptName cn : c.getNames()) {
+            if (cn == null || cn.getName() == null) continue;
+            if (cn.getLocale() != null && "en".equals(cn.getLocale().getLanguage())) {
+                return cn.getName();
+            }
+            if (fallback == null) fallback = cn.getName();
         }
-        return c.getDisplayString();
+        return fallback;
     }
 }

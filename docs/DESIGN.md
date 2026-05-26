@@ -2,6 +2,56 @@
 
 Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. Veronica and Andrew shared some really helpful direction there, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
 
+## Current Implementation Status (spike)
+
+The architecture below has been **prototyped end-to-end** against OpenMRS Platform 2.8.4. Source: see the rest of this repository — `omod/` and `api/` Maven modules, with 11 unit tests.
+
+**Live demo against the spike's isolated stack:**
+
+```bash
+# Discovery
+curl -u admin:Admin123 http://localhost:8081/openmrs/ws/cds-services
+# 200 {"services":[{"hook":"medication-prescribe","title":"Drug-Allergy Alert",
+#                   "description":"...","id":"drug-allergy"}]}
+
+# Invocation against a real patient with a recorded penicillin allergy
+curl -b cookies.txt -X POST http://localhost:8081/openmrs/ws/cds-services/drug-allergy \
+  -H 'Content-Type: application/json' \
+  -d '{"hook":"medication-prescribe","hookInstance":"demo",
+       "context":{"patientId":"<uuid>","medications":{"entry":[
+         {"resource":{"medicationCodeableConcept":{"text":"Amoxicillin",
+           "coding":[{"system":"http://snomed.info/sct","code":"27658006"}]}}}]}}}'
+# 200
+# {
+#   "cards": [{
+#     "summary": "⚠ Allergy to penicillin (class match)",
+#     "detail":  "Amoxicillin contains Amoxicillin (substance), which is a Penicillin —
+#                 the causative-agent class for Allergy to penicillin.
+#                 Recorded reaction: Hepatotoxicity",
+#     "indicator": "critical",
+#     "source":  { "label": "OpenMRS Drug-Allergy Alert" }
+#   }],
+#   "systemActions": []
+# }
+```
+
+The matching algorithm (Java port of the v2 Python spike) bridges three SNOMED hierarchies via the `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID 127489000) attribute relationships, as described in the architecture section below.
+
+**What the spike validated:**
+
+- ✅ CDS-Hooks 2.0 discovery + invocation work at the spec-compliant `/openmrs/ws/cds-services` URL
+- ✅ Cross-hierarchy SNOMED traversal correctly identifies Amoxicillin as a penicillin
+- ✅ Severity → CDS-Hooks `indicator` mapping (SEVERE → critical) works
+- ✅ Module loads cleanly without modifying `openmrs-core`, `openmrs-module-fhir2`, or `esm-patient-medications-app`
+
+**Known gaps (tracked in repo issues / SPIKE_JOURNAL.md):**
+
+- POST requires session-cookie auth; basic auth doesn't establish a privileged user context. Production answer is bearer-token auth per CDS-Hooks 2.0 security spec.
+- Matching can return noisy "matched against root-of-hierarchy" cards. Needs a filter for overly-broad class concepts.
+- Frontend extension package (`esm-cdshooks-app`) not yet built. The integration point in `esm-patient-chart` is already identified — `order-item-additional-info-slot` on each line of the medication order basket.
+
+---
+
 ## Problem
 
 When a clinician prescribes a drug that conflicts with one of the patient's recorded allergies, the O3 RefApp does not surface a Clinical Decision Support warning. That is a patient-safety gap.
