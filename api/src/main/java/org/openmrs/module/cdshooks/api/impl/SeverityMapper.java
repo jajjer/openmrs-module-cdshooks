@@ -14,6 +14,10 @@ import java.util.Locale;
  * but display names tend to be "Mild", "Moderate", "Severe". A more robust
  * implementation could match by SNOMED reference term — left as a follow-up
  * once a canonical severity-concept set is agreed with the terminology team.
+ *
+ * <p>Matching is on exact case-insensitive equality with the recognized
+ * severity labels. Substring matching would incorrectly classify clinical
+ * findings like "Severe sepsis" or "Severe malaria" as SEVERE.
  */
 @Component
 public class SeverityMapper {
@@ -23,10 +27,12 @@ public class SeverityMapper {
         String name = displayName(severityConcept);
         if (name == null) return AllergyMatch.Severity.UNKNOWN;
         String n = name.toLowerCase(Locale.ROOT).trim();
-        if (n.contains("severe")) return AllergyMatch.Severity.SEVERE;
-        if (n.contains("moderate")) return AllergyMatch.Severity.MODERATE;
-        if (n.contains("mild")) return AllergyMatch.Severity.MILD;
-        return AllergyMatch.Severity.UNKNOWN;
+        switch (n) {
+            case "severe":   return AllergyMatch.Severity.SEVERE;
+            case "moderate": return AllergyMatch.Severity.MODERATE;
+            case "mild":     return AllergyMatch.Severity.MILD;
+            default:         return AllergyMatch.Severity.UNKNOWN;
+        }
     }
 
     /** Maps our severity enum to the CDS-Hooks Card {@code indicator} field. */

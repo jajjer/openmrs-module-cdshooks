@@ -40,7 +40,7 @@ export function useDrugAllergyAlerts(
   const shouldFetch = Boolean(patientUuid && drugSnomedCode);
 
   const body = shouldFetch
-    ? buildRequestBody(patientUuid!, drugSnomedCode!, drugDisplay ?? "Ordered drug")
+    ? buildCdsHooksRequestBody(patientUuid!, drugSnomedCode!, drugDisplay ?? "Ordered drug")
     : null;
 
   const { data, error, isLoading, mutate } = useSWR<{ data: CdsHooksResponse }, Error>(
@@ -68,7 +68,8 @@ export function useDrugAllergyAlerts(
   };
 }
 
-function buildRequestBody(patientUuid: string, sctid: string, display: string) {
+/** Exposed for unit testing. */
+export function buildCdsHooksRequestBody(patientUuid: string, sctid: string, display: string) {
   return {
     hook: "medication-prescribe",
     hookInstance: cryptoRandomId(),

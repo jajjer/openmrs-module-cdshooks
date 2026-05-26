@@ -134,4 +134,80 @@ describe("DrugAllergyAlert", () => {
     const { container } = render(<DrugAllergyAlert orderItemUuid={drugUuid} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("renders one notification per card when the backend returns multiple", () => {
+    mockedUseDrugSnomed.mockReturnValue({
+      info: { snomedCode: "27658006", display: "Amoxicillin" },
+      isLoading: false,
+      error: undefined,
+    } as never);
+    mockedUseDrugAllergyAlerts.mockReturnValue({
+      cards: [
+        criticalCard,
+        { ...criticalCard, uuid: "card-2", summary: "⚠ Allergy to amoxicillin (ingredient match)" },
+      ],
+      isLoading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    } as never);
+
+    render(<DrugAllergyAlert orderItemUuid={drugUuid} />);
+
+    const alerts = screen.getAllByRole("status");
+    expect(alerts).toHaveLength(2);
+    expect(alerts[1]).toHaveTextContent(/ingredient match/);
+  });
+
+  it("maps indicator=warning to Carbon kind=warning", () => {
+    mockedUseDrugSnomed.mockReturnValue({
+      info: { snomedCode: "27658006", display: "Amoxicillin" },
+      isLoading: false,
+      error: undefined,
+    } as never);
+    mockedUseDrugAllergyAlerts.mockReturnValue({
+      cards: [{ ...criticalCard, indicator: "warning" as const }],
+      isLoading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    } as never);
+
+    const { container } = render(<DrugAllergyAlert orderItemUuid={drugUuid} />);
+    expect(
+      container.querySelector(".cds--inline-notification--warning"),
+    ).toBeInTheDocument();
+  });
+
+  it("maps indicator=info to Carbon kind=info", () => {
+    mockedUseDrugSnomed.mockReturnValue({
+      info: { snomedCode: "27658006", display: "Amoxicillin" },
+      isLoading: false,
+      error: undefined,
+    } as never);
+    mockedUseDrugAllergyAlerts.mockReturnValue({
+      cards: [{ ...criticalCard, indicator: "info" as const }],
+      isLoading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    } as never);
+
+    const { container } = render(<DrugAllergyAlert orderItemUuid={drugUuid} />);
+    expect(container.querySelector(".cds--inline-notification--info")).toBeInTheDocument();
+  });
+
+  it("maps indicator=critical to Carbon kind=error", () => {
+    mockedUseDrugSnomed.mockReturnValue({
+      info: { snomedCode: "27658006", display: "Amoxicillin" },
+      isLoading: false,
+      error: undefined,
+    } as never);
+    mockedUseDrugAllergyAlerts.mockReturnValue({
+      cards: [criticalCard],
+      isLoading: false,
+      error: undefined,
+      refresh: vi.fn(),
+    } as never);
+
+    const { container } = render(<DrugAllergyAlert orderItemUuid={drugUuid} />);
+    expect(container.querySelector(".cds--inline-notification--error")).toBeInTheDocument();
+  });
 });

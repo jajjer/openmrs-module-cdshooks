@@ -36,11 +36,12 @@ export function useDrugSnomed(drugUuid: string | null | undefined) {
     revalidateIfStale: false,
   });
 
-  const info: DrugSnomedInfo | null = data?.data ? extract(data.data) : null;
+  const info: DrugSnomedInfo | null = data?.data ? extractDrugSnomed(data.data) : null;
   return { info, error, isLoading };
 }
 
-function extract(med: FhirMedication): DrugSnomedInfo {
+/** Exposed for unit testing. */
+export function extractDrugSnomed(med: FhirMedication): DrugSnomedInfo {
   const codings = med.code?.coding ?? [];
   const snomed = codings.find(
     (c) => c.system && c.system.startsWith(SNOMED_SYSTEM_PREFIX) && c.code,

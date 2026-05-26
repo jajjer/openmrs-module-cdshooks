@@ -125,9 +125,10 @@ public class ForwardingFilter implements Filter {
             return BearerAuthResult.REJECTED;
         }
 
+        String expectedIssuer = gp(CdsHooksConstants.GP_BEARER_EXPECTED_ISSUER);
         String username;
         try {
-            username = verifyAndExtractSubject(token, secret);
+            username = verifyAndExtractSubject(token, secret, expectedIssuer);
         } catch (JwtException e) {
             log.warn("Rejected bearer token: {}", e.getMessage());
             res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
@@ -145,7 +146,8 @@ public class ForwardingFilter implements Filter {
         return BearerAuthResult.AUTHENTICATED;
     }
 
-    private static String verifyAndExtractSubject(String token, String secret) {
+    /** Package-private for unit testing. */
+    static String verifyAndExtractSubject(String token, String secret, String expectedIssuer) {
         SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         Jws<Claims> parsed = Jwts.parserBuilder()
                 .setSigningKey(key)
@@ -153,7 +155,6 @@ public class ForwardingFilter implements Filter {
                 .parseClaimsJws(token);
         Claims claims = parsed.getBody();
 
-        String expectedIssuer = gp(CdsHooksConstants.GP_BEARER_EXPECTED_ISSUER);
         if (expectedIssuer != null && !expectedIssuer.isBlank()
                 && !expectedIssuer.trim().equals(claims.getIssuer())) {
             throw new JwtException("Issuer mismatch: " + claims.getIssuer());

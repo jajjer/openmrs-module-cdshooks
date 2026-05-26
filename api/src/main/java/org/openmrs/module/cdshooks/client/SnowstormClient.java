@@ -101,8 +101,12 @@ public class SnowstormClient {
         JsonNode body = fhirGet(baseUrl() + "/CodeSystem/$lookup"
                 + "?system=" + enc(snomedSystem())
                 + "&code=" + enc(conceptSctid));
-        if (body == null) return Collections.emptyList();
+        return parseAttributeValues(body, attributeSctid);
+    }
 
+    /** Pure function — exposed package-private for testing. */
+    static List<SnomedConcept> parseAttributeValues(JsonNode body, String attributeSctid) {
+        if (body == null) return Collections.emptyList();
         List<SnomedConcept> values = new ArrayList<>();
         for (JsonNode param : body.path("parameter")) {
             if (!"property".equals(param.path("name").asText())) continue;
@@ -131,6 +135,11 @@ public class SnowstormClient {
                 + "?system=" + enc(snomedSystem())
                 + "&codeA=" + enc(ancestor)
                 + "&codeB=" + enc(descendant));
+        return parseSubsumesOutcome(body);
+    }
+
+    /** Pure function — exposed package-private for testing. */
+    static SubsumptionOutcome parseSubsumesOutcome(JsonNode body) {
         if (body == null) return SubsumptionOutcome.UNKNOWN;
         for (JsonNode param : body.path("parameter")) {
             if ("outcome".equals(param.path("name").asText())) {
