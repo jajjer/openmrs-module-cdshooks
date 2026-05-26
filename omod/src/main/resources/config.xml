@@ -41,13 +41,24 @@
         <description>TTL in seconds for cached terminology lookups (causative agents, active ingredients, subsumption results)</description>
     </globalProperty>
 
-    <!-- CDS-Hooks 2.0 service host. OpenMRS mounts this at /ms/cdsServicesServlet.
-         A forwarding filter that exposes the spec-compliant /ws/cds-services URL
-         is a planned follow-up. -->
+    <!-- CDS-Hooks 2.0 service host. OpenMRS mounts this internally at
+         /ms/cdsServicesServlet; the ForwardingFilter below exposes it at the
+         spec-compliant /ws/cds-services URL, which is also CSRF-exempt by
+         virtue of the OpenMRS-wide csrfguard.unprotected.WS rule. -->
     <servlet>
         <servlet-name>cdsServicesServlet</servlet-name>
         <servlet-class>org.openmrs.module.cdshooks.web.servlet.CdsServicesServlet</servlet-class>
     </servlet>
+
+    <filter>
+        <filter-name>cdsHooksForwardingFilter</filter-name>
+        <filter-class>org.openmrs.module.cdshooks.web.filter.ForwardingFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>cdsHooksForwardingFilter</filter-name>
+        <url-pattern>/ws/cds-services</url-pattern>
+        <url-pattern>/ws/cds-services/*</url-pattern>
+    </filter-mapping>
 
     <mappingFiles>
     </mappingFiles>
