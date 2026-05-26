@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.openmrs.org/routes.schema.json",
+  "backendDependencies": {
+    "cdshooks": "^1.0.0"
+  },
+  "extensions": [
+    {
+      "name": "drug-allergy-alert",
+      "component": "drugAllergyAlert",
+      "slot": "order-item-additional-info-slot"
+    }
+  ]
+}
