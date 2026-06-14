@@ -10,8 +10,8 @@
 
 package org.openmrs.module.cdshooks.terminology;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openmrs.ConceptMapType;
 import org.openmrs.ConceptReferenceTerm;
 import org.openmrs.ConceptReferenceTermMap;
@@ -19,7 +19,7 @@ import org.openmrs.ConceptSource;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.cdshooks.model.SubsumptionOutcome;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
+import org.openmrs.test.jupiter.BaseModuleContextSensitiveTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -35,8 +35,9 @@ import static org.hamcrest.Matchers.is;
  * IDs): an RxNORM ingredient CUI mapped {@code NARROWER-THAN} an RxClass class
  * NUI, then asserts the class subsumption resolves.
  *
- * <p>Requires the full OpenMRS test harness (Java 8/11, openmrs-test); run via
- * {@code mvn test}.
+ * <p>Requires the full OpenMRS test harness (openmrs-api test-jar + openmrs-test);
+ * run via {@code mvn test}. Uses the JUnit 5 base class so it runs natively on the
+ * Jupiter engine rather than via the JUnit 4 vintage engine.
  */
 public class ConceptReferenceTermMapBackendIntegrationTest extends BaseModuleContextSensitiveTest {
 
@@ -45,7 +46,7 @@ public class ConceptReferenceTermMapBackendIntegrationTest extends BaseModuleCon
 
     private ConceptReferenceTermMapBackend backend;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         ConceptService cs = Context.getConceptService();
 
