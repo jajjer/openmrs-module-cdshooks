@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -25,8 +26,11 @@ import java.util.Map;
  *
  * <p>The request's {@code context.medications} field is a FHIR Bundle of draft
  * MedicationRequest resources. Each MedicationRequest may carry a
- * {@code medicationCodeableConcept.coding} array; we collect entries whose
- * system is SNOMED CT (or has no system, treated as the request-default).
+ * {@code medicationCodeableConcept.coding} array; we collect entries from the
+ * terminologies the matcher can resolve — SNOMED CT, RxNORM and RxClass — plus
+ * any coding with no {@code system} (treated as the request-default). This
+ * mirrors how CIEL maps drugs to both SNOMED and RxNORM, so a SNOMED-coded or
+ * an RxNORM-coded order both reach the matcher.
  *
  * <p>This parser is deliberately lenient — CDS-Hooks payloads vary by EHR.
  * Unknown fields are ignored; missing fields produce empty results rather
@@ -35,7 +39,8 @@ import java.util.Map;
 @Component
 public class CdsHooksRequestParser {
 
-    private static final String SNOMED_SYSTEM_PREFIX = "http://snomed.info/sct";
+    /** FHIR {@code system} URI fragments for the terminologies the matcher resolves. */
+    private static final String[] ACCEPTED_SYSTEM_TOKENS = {"snomed", "rxnorm", "rxclass"};
 
     public String extractPatientUuid(CdsHooksRequest request) {
         if (request == null || request.getContext() == null) return null;
@@ -73,24 +78,38 @@ public class CdsHooksRequestParser {
         Object codingObj = codeable.get("coding");
         if (!(codingObj instanceof List)) return null;
 
-        // Preserve insertion order; dedupe by SCTID.
-        Map<String, Boolean> sctids = new LinkedHashMap<>();
+        // Preserve insertion order; dedupe by code.
+        Map<String, Boolean> codes = new LinkedHashMap<>();
         for (Object cObj : (List<Object>) codingObj) {
             if (!(cObj instanceof Map)) continue;
             Map<String, Object> coding = (Map<String, Object>) cObj;
             String system = stringOrNull(coding.get("system"));
             String code = stringOrNull(coding.get("code"));
             if (code == null) continue;
-            if (system == null || system.startsWith(SNOMED_SYSTEM_PREFIX)) {
-                sctids.put(code.trim(), Boolean.TRUE);
+            if (isAcceptedSystem(system)) {
+                codes.put(code.trim(), Boolean.TRUE);
                 if (display == null) {
                     display = stringOrNull(coding.get("display"));
                 }
             }
         }
-        if (sctids.isEmpty()) return null;
+        if (codes.isEmpty()) return null;
         if (display == null) display = "Ordered medication";
-        return new AllergyMatcher.DrugInput(display, new ArrayList<>(sctids.keySet()));
+        return new AllergyMatcher.DrugInput(display, new ArrayList<>(codes.keySet()));
+    }
+
+    /** A coding is usable if it has no system (request-default) or names a terminology we resolve. */
+    private static boolean isAcceptedSystem(String system) {
+        if (system == null) {
+            return true;
+        }
+        String lower = system.toLowerCase(Locale.ROOT);
+        for (String token : ACCEPTED_SYSTEM_TOKENS) {
+            if (lower.contains(token)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String stringOrNull(Object o) {

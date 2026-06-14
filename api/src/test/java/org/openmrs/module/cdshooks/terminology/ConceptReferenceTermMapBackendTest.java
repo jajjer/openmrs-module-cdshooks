@@ -29,6 +29,7 @@ import java.util.List;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -142,6 +143,21 @@ public class ConceptReferenceTermMapBackendTest {
     @Test
     public void getAttributeValues_alwaysEmpty() {
         assertThat(backend.getAttributeValues(CUI_AMOXICILLIN, "127489000"), is(empty()));
+    }
+
+    @Test
+    public void displayFor_returnsTermName() {
+        ConceptReferenceTerm named = term(CUI_AMOXICILLIN, rxnorm);
+        named.setName("amoxicillin");
+        stubResolve(named); // override the setUp stub for this code
+        assertThat(backend.displayFor(CUI_AMOXICILLIN), is("amoxicillin"));
+    }
+
+    @Test
+    public void displayFor_unknownCode_returnsNull() {
+        when(conceptService.getConceptReferenceTerms(eq("99999"), any(), any(), any(), anyBoolean()))
+                .thenReturn(Collections.emptyList());
+        assertThat(backend.displayFor("99999"), is(nullValue()));
     }
 
     /* -------------------- helpers -------------------- */

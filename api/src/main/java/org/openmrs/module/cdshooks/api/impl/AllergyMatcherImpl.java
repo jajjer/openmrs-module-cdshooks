@@ -103,7 +103,7 @@ public class AllergyMatcherImpl implements AllergyMatcher {
         for (String sctid : seedSctids) {
             List<CodedConcept> bridged = terminology.getAttributeValues(sctid, attributeSctid);
             if (bridged.isEmpty()) {
-                out.add(new CodedConcept(sctid, null));
+                out.add(new CodedConcept(sctid, terminology.displayFor(sctid)));
             } else {
                 out.addAll(bridged);
             }

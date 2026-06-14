@@ -122,6 +122,20 @@ public class ConceptReferenceTermMapBackend implements TerminologyBackend {
         return Collections.emptyList();
     }
 
+    /** The reference term's name, so alert text reads in names rather than raw codes. */
+    @Override
+    public String displayFor(String code) {
+        if (code == null) {
+            return null;
+        }
+        for (ConceptReferenceTerm term : resolve(code)) {
+            if (term.getName() != null && !term.getName().isBlank()) {
+                return term.getName();
+            }
+        }
+        return null;
+    }
+
     @Override
     public SubsumptionOutcome subsumes(String ancestorCode, String descendantCode) {
         if (ancestorCode == null || descendantCode == null) {

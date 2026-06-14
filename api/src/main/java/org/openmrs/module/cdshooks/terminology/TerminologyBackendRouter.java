@@ -108,6 +108,21 @@ public class TerminologyBackendRouter implements TerminologyBackend {
         }
     }
 
+    @Override
+    public String displayFor(String code) {
+        switch (mode()) {
+            case REFERENCE_MAP:
+                return referenceMap.displayFor(code);
+            case BOTH: {
+                String label = referenceMap.displayFor(code);
+                return label != null ? label : snowstorm.displayFor(code);
+            }
+            case SNOWSTORM:
+            default:
+                return snowstorm.displayFor(code);
+        }
+    }
+
     /* -------------------- mode selection -------------------- */
 
     private enum Mode { SNOWSTORM, REFERENCE_MAP, BOTH }

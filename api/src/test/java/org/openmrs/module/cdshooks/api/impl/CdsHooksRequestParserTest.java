@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -73,13 +74,45 @@ public class CdsHooksRequestParserTest {
     }
 
     @Test
-    public void ignoresNonSnomedCodings() throws Exception {
+    public void ignoresUnrecognisedSystemCodings() throws Exception {
+        // CIEL isn't a hierarchy the matcher resolves, so a CIEL-only coding is dropped.
         String json = "{ \"context\": { \"medications\": { \"entry\": [{ \"resource\": {"
                 + "  \"medicationCodeableConcept\": {"
                 + "    \"coding\": [{ \"system\": \"https://cielterminology.org\", \"code\": \"71160\" }]"
                 + "  } } }] } } }";
 
         assertThat(parser.extractDrugs(parse(json)), is(empty()));
+    }
+
+    @Test
+    public void acceptsRxNormCoding() throws Exception {
+        // CIEL maps drugs to both SNOMED and RxNORM; an RxNORM-coded order must reach the matcher.
+        String json = "{ \"context\": { \"medications\": { \"entry\": [{ \"resource\": {"
+                + "  \"medicationCodeableConcept\": { \"text\": \"Amoxicillin\","
+                + "    \"coding\": [{ \"system\": \"http://www.nlm.nih.gov/research/umls/rxnorm\", \"code\": \"723\" }]"
+                + "  } } }] } } }";
+
+        assertThat(parser.extractDrugs(parse(json)).get(0).referenceCodes, contains("723"));
+    }
+
+    @Test
+    public void acceptsCodingWithNoSystem() throws Exception {
+        String json = "{ \"context\": { \"medications\": { \"entry\": [{ \"resource\": {"
+                + "  \"medicationCodeableConcept\": { \"coding\": [{ \"code\": \"723\" }] } } }] } } }";
+
+        assertThat(parser.extractDrugs(parse(json)).get(0).referenceCodes, contains("723"));
+    }
+
+    @Test
+    public void collectsBothSnomedAndRxNormCodings() throws Exception {
+        String json = "{ \"context\": { \"medications\": { \"entry\": [{ \"resource\": {"
+                + "  \"medicationCodeableConcept\": { \"text\": \"Amoxicillin\", \"coding\": ["
+                + "    { \"system\": \"http://snomed.info/sct\", \"code\": \"27658006\" },"
+                + "    { \"system\": \"http://www.nlm.nih.gov/research/umls/rxnorm\", \"code\": \"723\" }"
+                + "  ] } } }] } } }";
+
+        assertThat(parser.extractDrugs(parse(json)).get(0).referenceCodes,
+                containsInAnyOrder("27658006", "723"));
     }
 
     @Test

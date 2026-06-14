@@ -30,10 +30,8 @@ import java.util.List;
  * <p>This interface is the seam that lets a deployment choose either source
  * (or both) behind the same {@link org.openmrs.module.cdshooks.api.AllergyMatcher}.
  *
- * <p><b>Note:</b> {@link CodedConcept} is used here as a generic (code,
- * display) value object, not as a SNOMED-only type. A rename to a neutral
- * {@code CodedConcept} is a worthwhile follow-up now that the matcher is no
- * longer SNOMED-exclusive.
+ * <p>{@link CodedConcept} is used here as a generic (code, display) value
+ * object, carrying a SNOMED SCTID, an RxNORM CUI or an RxClass NUI alike.
  */
 public interface TerminologyBackend {
 
@@ -68,4 +66,13 @@ public interface TerminologyBackend {
      *         cannot be determined
      */
     SubsumptionOutcome subsumes(String ancestorCode, String descendantCode);
+
+    /**
+     * A human-readable label for a code, used to make alert text read in names
+     * rather than raw codes. Returns {@code null} when the backend has no label
+     * — callers fall back to showing the code itself.
+     */
+    default String displayFor(String code) {
+        return null;
+    }
 }
