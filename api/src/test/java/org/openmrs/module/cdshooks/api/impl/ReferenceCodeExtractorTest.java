@@ -1,3 +1,13 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.api.impl;
 
 import org.junit.Test;
@@ -7,17 +17,15 @@ import org.openmrs.ConceptMapType;
 import org.openmrs.ConceptReferenceTerm;
 import org.openmrs.ConceptSource;
 
-import java.util.List;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 
-public class SnomedMappingExtractorTest {
+public class ReferenceCodeExtractorTest {
 
-    private final SnomedMappingExtractor extractor = new SnomedMappingExtractor();
+    private final ReferenceCodeExtractor extractor = new ReferenceCodeExtractor();
 
     @Test
     public void nullConcept_returnsEmpty() {
@@ -36,12 +44,6 @@ public class SnomedMappingExtractorTest {
     }
 
     @Test
-    public void picksUpShortNameSnomed() {
-        Concept c = withMapping("SNOMED", null, "12345");
-        assertThat(extractor.extract(c), contains("12345"));
-    }
-
-    @Test
     public void picksUpHl7Code_SCT() {
         // OpenMRS sometimes labels SNOMED sources by their HL7 code "SCT".
         Concept c = withMapping("Some Other Name", "SCT", "67890");
@@ -55,10 +57,23 @@ public class SnomedMappingExtractorTest {
     }
 
     @Test
-    public void ignoresNonSnomedSources() {
+    public void picksUpRxNorm() {
+        // RxNORM is now recognised — it drives the reference-map / RxClass path.
+        Concept c = withMapping("RxNORM", null, "723");
+        assertThat(extractor.extract(c), contains("723"));
+    }
+
+    @Test
+    public void picksUpRxClassNui() {
+        Concept c = withMapping("RxClass", null, "N0000175503");
+        assertThat(extractor.extract(c), contains("N0000175503"));
+    }
+
+    @Test
+    public void ignoresUnrelatedSources() {
+        // CIEL/WHOATC/AMPATH/ICD aren't hierarchies this matcher resolves.
         Concept c = new Concept();
         c.addConceptMapping(buildMapping("CIEL", null, "149071"));
-        c.addConceptMapping(buildMapping("RxNORM", null, "161"));
         c.addConceptMapping(buildMapping("WHOATC", null, "N02BE01"));
         c.addConceptMapping(buildMapping("AMPATH", null, "453"));
         c.addConceptMapping(buildMapping("ICD-11-WHO", null, "QC44.2"));
@@ -66,12 +81,21 @@ public class SnomedMappingExtractorTest {
     }
 
     @Test
-    public void collectsAllSnomedMappingsWhenConceptHasMultiple() {
+    public void collectsSnomedAndRxNormTogether() {
+        // A richly-mapped CIEL drug (e.g. Acetaminophen) carries both.
         Concept c = new Concept();
-        c.addConceptMapping(buildMapping("CIEL", null, "149071"));
+        c.addConceptMapping(buildMapping("CIEL", null, "70116"));
+        c.addConceptMapping(buildMapping("SNOMED CT", null, "777067000"));
+        c.addConceptMapping(buildMapping("RxNORM", null, "161"));
+        assertThat(extractor.extract(c), containsInAnyOrder("777067000", "161"));
+    }
+
+    @Test
+    public void deduplicatesRepeatedCodes() {
+        Concept c = new Concept();
         c.addConceptMapping(buildMapping("SNOMED CT", null, "91936005"));
-        c.addConceptMapping(buildMapping("SNOMED CT", null, "294505008")); // hypothetical synonym mapping
-        assertThat(extractor.extract(c), containsInAnyOrder("91936005", "294505008"));
+        c.addConceptMapping(buildMapping("SNOMED", null, "91936005"));
+        assertThat(extractor.extract(c), contains("91936005"));
     }
 
     @Test

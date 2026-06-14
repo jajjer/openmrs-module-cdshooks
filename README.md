@@ -65,6 +65,7 @@ Global properties:
 |---|---|---|
 | `cdshooks.snowstormUrl` | `https://tx.fhir.org/r4` | Base FHIR URL of the SNOMED terminology server |
 | `cdshooks.snomedSystem` | `http://snomed.info/sct` | FHIR system URI for SNOMED CT codes |
+| `cdshooks.terminologyBackend` | `snowstorm` | Source for parent-child / subsumption lookups: `snowstorm` (live FHIR), `referenceMap` (local `concept_reference_term_map`, e.g. RxClass NUI/CUI edges), or `both`. See [docs/REFERENCE_MAP_BACKEND.md](docs/REFERENCE_MAP_BACKEND.md). |
 | `cdshooks.cacheTtlSeconds` | `3600` | TTL for cached terminology lookups |
 
 ## Compatibility

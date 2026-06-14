@@ -1,0 +1,23 @@
+OpenMRS is licensed under the OpenMRS Public License Version 2.0, which is the
+Mozilla Public License Version 2.0 (MPL 2.0) together with the OpenMRS
+Healthcare Disclaimer.
+
+This Source Code Form is subject to the terms of the Mozilla Public License,
+v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain
+one at http://mozilla.org/MPL/2.0/.
+
+The full text of the Mozilla Public License, v. 2.0 is available at:
+    http://mozilla.org/MPL/2.0/
+
+OpenMRS Healthcare Disclaimer
+-----------------------------
+The OpenMRS code, including all accompanying documentation and other materials,
+is provided for use in clinical and other healthcare-related settings only as a
+tool to assist healthcare professionals. It is not a substitute for the
+professional judgment of trained healthcare providers. The software is provided
+"as is", without warranty of any kind, and the user assumes all responsibility
+for its use. See http://openmrs.org/license for the complete Healthcare
+Disclaimer.
+
+Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+graphic logo is a trademark of OpenMRS Inc.

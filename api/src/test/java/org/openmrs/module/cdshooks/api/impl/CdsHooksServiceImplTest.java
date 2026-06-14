@@ -1,3 +1,13 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.api.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,7 +62,7 @@ public class CdsHooksServiceImplTest {
     @Mock private AllergyMatcher matcher;
 
     private final CdsHooksRequestParser parser = new CdsHooksRequestParser();
-    private final SnomedMappingExtractor snomedExtractor = new SnomedMappingExtractor();
+    private final ReferenceCodeExtractor referenceCodeExtractor = new ReferenceCodeExtractor();
     private final SeverityMapper severityMapper = new SeverityMapper();
     private final CdsAuditLogger auditLogger = new CdsAuditLogger();
 
@@ -64,7 +74,7 @@ public class CdsHooksServiceImplTest {
         service.getClass(); // ensures @InjectMocks ran
         // We need to set the non-mocked fields via reflection because they're @Autowired private.
         setField(service, "parser", parser);
-        setField(service, "snomedExtractor", snomedExtractor);
+        setField(service, "referenceCodeExtractor", referenceCodeExtractor);
         setField(service, "severityMapper", severityMapper);
         setField(service, "auditLogger", auditLogger);
     }

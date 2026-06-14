@@ -1,3 +1,13 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.client;
 
 import java.util.LinkedHashMap;
@@ -20,13 +30,13 @@ import java.util.function.Function;
  *
  * <p>Thread-safety: all operations are guarded by {@code synchronized(this)}.
  * The cache is sized in terms of distinct keys, not bytes; sizing assumes
- * cached values are modest (e.g., a short list of {@code SnomedConcept}
+ * cached values are modest (e.g., a short list of {@code CodedConcept}
  * records, or a single {@code SubsumptionOutcome}).
  */
-final class TtlCache<K, V> {
+public final class TtlCache<K, V> {
 
     /** Default cap when no override is supplied. */
-    static final int DEFAULT_MAX_ENTRIES = 10_000;
+    public static final int DEFAULT_MAX_ENTRIES = 10_000;
 
     private static final class Entry<V> {
         final V value;
@@ -38,11 +48,11 @@ final class TtlCache<K, V> {
     private final long ttlMillis;
     private final int maxEntries;
 
-    TtlCache(long ttlMillis) {
+    public TtlCache(long ttlMillis) {
         this(ttlMillis, DEFAULT_MAX_ENTRIES);
     }
 
-    TtlCache(long ttlMillis, int maxEntries) {
+    public TtlCache(long ttlMillis, int maxEntries) {
         if (maxEntries <= 0) {
             throw new IllegalArgumentException("maxEntries must be > 0");
         }
@@ -56,7 +66,7 @@ final class TtlCache<K, V> {
         };
     }
 
-    synchronized V get(K key, Function<K, V> loader) {
+    public synchronized V get(K key, Function<K, V> loader) {
         long now = System.currentTimeMillis();
         Entry<V> existing = map.get(key); // access-order: touches recency
         if (existing != null && existing.expiresAt > now) {

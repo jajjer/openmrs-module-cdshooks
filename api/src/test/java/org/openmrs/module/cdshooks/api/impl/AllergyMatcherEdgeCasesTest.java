@@ -1,3 +1,13 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.api.impl;
 
 import org.junit.Before;
@@ -10,7 +20,7 @@ import org.openmrs.module.cdshooks.CdsHooksConstants;
 import org.openmrs.module.cdshooks.api.AllergyMatcher;
 import org.openmrs.module.cdshooks.client.SnowstormClient;
 import org.openmrs.module.cdshooks.model.AllergyMatch;
-import org.openmrs.module.cdshooks.model.SnomedConcept;
+import org.openmrs.module.cdshooks.model.CodedConcept;
 import org.openmrs.module.cdshooks.model.SubsumptionOutcome;
 
 import java.util.Collections;
@@ -55,11 +65,11 @@ public class AllergyMatcherEdgeCasesTest {
     @Test
     public void multipleAllergies_onlyMatchingOneProducesCard() {
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
         when(snowstorm.getAttributeValues(FINDING_LATEX_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_LATEX, "Latex")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_LATEX, "Latex")));
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
             .thenReturn(SubsumptionOutcome.SUBSUMES);
         // Latex does NOT subsume Amoxicillin; default stub returns NOT_SUBSUMED.
@@ -78,11 +88,11 @@ public class AllergyMatcherEdgeCasesTest {
     @Test
     public void multiIngredientDrug_matchesOnAnyIngredient() {
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
         when(snowstorm.getAttributeValues(PRODUCT_COMBO, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
             .thenReturn(List.of(
-                new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin"),
-                new SnomedConcept(SUBSTANCE_CLAVULANATE, "Clavulanate")));
+                new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin"),
+                new CodedConcept(SUBSTANCE_CLAVULANATE, "Clavulanate")));
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
             .thenReturn(SubsumptionOutcome.SUBSUMES);
         // Penicillin does NOT subsume Clavulanate.
@@ -102,9 +112,9 @@ public class AllergyMatcherEdgeCasesTest {
         // hierarchy node). Per SubsumptionOutcome.indicatesAncestry that
         // counts as a match.
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
             .thenReturn(SubsumptionOutcome.EQUIVALENT);
 
@@ -126,7 +136,7 @@ public class AllergyMatcherEdgeCasesTest {
         when(snowstorm.getAttributeValues(allergenIsSubstance, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
             .thenReturn(Collections.emptyList()); // no bridging attribute
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
             .thenReturn(SubsumptionOutcome.SUBSUMES);
 
@@ -143,7 +153,7 @@ public class AllergyMatcherEdgeCasesTest {
         // Drug concept mapped DIRECTLY to a substance SCTID — same fall-back.
         String drugIsSubstance = SUBSTANCE_AMOXICILLIN;
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_PENICILLIN, "Penicillin")));
         when(snowstorm.getAttributeValues(drugIsSubstance, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
             .thenReturn(Collections.emptyList());
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
@@ -162,9 +172,9 @@ public class AllergyMatcherEdgeCasesTest {
         // When the drug substance equals the allergen substance, that's an
         // INGREDIENT match (not CLASS). The matcher checks ingredient first.
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
 
         AllergyMatcher.DrugInput drug = new AllergyMatcher.DrugInput("Amoxicillin", List.of(PRODUCT_AMOXICILLIN));
         AllergyMatcher.AllergyInput allergy = allergy("Allergy to amoxicillin", FINDING_PENICILLIN_ALLERGY, AllergyMatch.Severity.SEVERE);
@@ -181,10 +191,10 @@ public class AllergyMatcherEdgeCasesTest {
         // drug substance, we only want one card per (allergen, drugSubstance).
         when(snowstorm.getAttributeValues(FINDING_PENICILLIN_ALLERGY, CdsHooksConstants.SCTID_CAUSATIVE_AGENT))
             .thenReturn(List.of(
-                new SnomedConcept(SUBSTANCE_PENICILLIN, "Penicillin"),
-                new SnomedConcept("6369005", "Penicillin antibacterial agent")));
+                new CodedConcept(SUBSTANCE_PENICILLIN, "Penicillin"),
+                new CodedConcept("6369005", "Penicillin antibacterial agent")));
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         when(snowstorm.subsumes(eq(SUBSTANCE_PENICILLIN), eq(SUBSTANCE_AMOXICILLIN)))
             .thenReturn(SubsumptionOutcome.SUBSUMES);
         when(snowstorm.subsumes(eq("6369005"), eq(SUBSTANCE_AMOXICILLIN)))
@@ -216,7 +226,7 @@ public class AllergyMatcherEdgeCasesTest {
         AllergyMatcher.AllergyInput allergy = new AllergyMatcher.AllergyInput(
             "Free-text allergy", List.of(), AllergyMatch.Severity.SEVERE, null);
         when(snowstorm.getAttributeValues(PRODUCT_AMOXICILLIN, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT))
-            .thenReturn(List.of(new SnomedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
+            .thenReturn(List.of(new CodedConcept(SUBSTANCE_AMOXICILLIN, "Amoxicillin")));
         assertThat(matcher.match(drug, List.of(allergy)), is(empty()));
     }
 
