@@ -1,11 +1,22 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.cdshooks.CdsHooksConstants;
-import org.openmrs.module.cdshooks.model.SnomedConcept;
+import org.openmrs.module.cdshooks.model.CodedConcept;
 import org.openmrs.module.cdshooks.model.SubsumptionOutcome;
+import org.openmrs.module.cdshooks.terminology.TerminologyBackend;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -36,8 +47,13 @@ import java.util.concurrent.TimeUnit;
  * module startup, since the OpenMRS service context is not guaranteed to be
  * fully initialized when module beans are being wired.
  */
-@Component
-public class SnowstormClient {
+@Component(SnowstormClient.BEAN_NAME)
+public class SnowstormClient implements TerminologyBackend {
+
+    public static final String BEAN_NAME = "cdshooks.snowstormBackend";
+
+    /** Backend identifier for the {@code cdshooks.terminologyBackend} selector. */
+    public static final String BACKEND_NAME = "snowstorm";
 
     private static final long DEFAULT_TTL_SECONDS = 3600L;
 
@@ -48,7 +64,7 @@ public class SnowstormClient {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
-    private volatile TtlCache<String, List<SnomedConcept>> attributeCache;
+    private volatile TtlCache<String, List<CodedConcept>> attributeCache;
     private volatile TtlCache<Map.Entry<String, String>, SubsumptionOutcome> subsumesCache;
 
     /**
@@ -56,11 +72,18 @@ public class SnowstormClient {
      * causative-agent values on a finding, or all active-ingredient values on
      * a product. Empty list if the attribute is absent.
      */
-    public List<SnomedConcept> getAttributeValues(String conceptSctid, String attributeSctid) {
+    @Override
+    public String name() {
+        return BACKEND_NAME;
+    }
+
+    @Override
+    public List<CodedConcept> getAttributeValues(String conceptSctid, String attributeSctid) {
         String cacheKey = conceptSctid + "|" + attributeSctid;
         return attributeCacheLazy().get(cacheKey, k -> loadAttributeValues(conceptSctid, attributeSctid));
     }
 
+    @Override
     public SubsumptionOutcome subsumes(String ancestorSctid, String descendantSctid) {
         Map.Entry<String, String> pair = new AbstractMap.SimpleImmutableEntry<>(ancestorSctid, descendantSctid);
         return subsumesCacheLazy().get(pair, p -> loadSubsumes(p.getKey(), p.getValue()));
@@ -68,8 +91,8 @@ public class SnowstormClient {
 
     /* -------------------- lazy cache init -------------------- */
 
-    private TtlCache<String, List<SnomedConcept>> attributeCacheLazy() {
-        TtlCache<String, List<SnomedConcept>> local = attributeCache;
+    private TtlCache<String, List<CodedConcept>> attributeCacheLazy() {
+        TtlCache<String, List<CodedConcept>> local = attributeCache;
         if (local != null) return local;
         synchronized (this) {
             if (attributeCache == null) {
@@ -106,7 +129,7 @@ public class SnowstormClient {
 
     /* -------------------- internals -------------------- */
 
-    private List<SnomedConcept> loadAttributeValues(String conceptSctid, String attributeSctid) {
+    private List<CodedConcept> loadAttributeValues(String conceptSctid, String attributeSctid) {
         JsonNode body = fhirGet(baseUrl() + "/CodeSystem/$lookup"
                 + "?system=" + enc(snomedSystem())
                 + "&code=" + enc(conceptSctid));
@@ -114,9 +137,9 @@ public class SnowstormClient {
     }
 
     /** Pure function — exposed package-private for testing. */
-    static List<SnomedConcept> parseAttributeValues(JsonNode body, String attributeSctid) {
+    static List<CodedConcept> parseAttributeValues(JsonNode body, String attributeSctid) {
         if (body == null) return Collections.emptyList();
-        List<SnomedConcept> values = new ArrayList<>();
+        List<CodedConcept> values = new ArrayList<>();
         for (JsonNode param : body.path("parameter")) {
             if (!"property".equals(param.path("name").asText())) continue;
             String code = null;
@@ -133,7 +156,7 @@ public class SnowstormClient {
                 }
             }
             if (attributeSctid.equals(code) && value != null) {
-                values.add(new SnomedConcept(value, description));
+                values.add(new CodedConcept(value, description));
             }
         }
         return values;

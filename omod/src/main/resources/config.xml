@@ -36,6 +36,18 @@
     </globalProperty>
 
     <globalProperty>
+        <property>cdshooks.terminologyBackend</property>
+        <defaultValue>snowstorm</defaultValue>
+        <description>Source for parent-child / subsumption lookups: "snowstorm" (live FHIR $lookup/$subsumes, default), "referenceMap" (local concept_reference_term_map edges — e.g. RxClass NUI/CUI class relationships loaded via Initializer, no terminology server required), or "both" (reference map first, Snowstorm as confirmation; any positive ancestry answer wins).</description>
+    </globalProperty>
+
+    <globalProperty>
+        <property>cdshooks.classMatchExcludedCodes</property>
+        <defaultValue>105590001,373873005,763158003,410942007</defaultValue>
+        <description>Comma-separated reference codes too broad to anchor a class match. A class match whose matched ancestor is one of these is suppressed to avoid alert fatigue (defaults are the SNOMED roots Substance, Pharmaceutical/biologic product, Medicinal product, Drug or medicament). Leave empty to fall back to the built-in defaults.</description>
+    </globalProperty>
+
+    <globalProperty>
         <property>cdshooks.cacheTtlSeconds</property>
         <defaultValue>3600</defaultValue>
         <description>TTL in seconds for cached terminology lookups (causative agents, active ingredients, subsumption results)</description>

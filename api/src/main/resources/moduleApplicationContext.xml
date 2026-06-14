@@ -10,5 +10,6 @@
 
     <context:component-scan base-package="org.openmrs.module.cdshooks.api.impl"/>
     <context:component-scan base-package="org.openmrs.module.cdshooks.client"/>
+    <context:component-scan base-package="org.openmrs.module.cdshooks.terminology"/>
 
 </beans>

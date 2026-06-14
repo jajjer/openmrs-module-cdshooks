@@ -1,9 +1,19 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
+ * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
+ *
+ * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
+ * graphic logo is a trademark of OpenMRS Inc.
+ */
+
 package org.openmrs.module.cdshooks.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
-import org.openmrs.module.cdshooks.model.SnomedConcept;
+import org.openmrs.module.cdshooks.model.CodedConcept;
 import org.openmrs.module.cdshooks.model.SubsumptionOutcome;
 
 import java.util.List;
@@ -78,12 +88,12 @@ public class SnowstormClientParseTest {
             "  ]}" +
             "]}");
 
-        List<SnomedConcept> values = SnowstormClient.parseAttributeValues(body, CAUSATIVE_AGENT);
+        List<CodedConcept> values = SnowstormClient.parseAttributeValues(body, CAUSATIVE_AGENT);
 
         // Only the two Causative-agent properties; Finding-site (363698007) excluded.
         assertThat(values, containsInAnyOrder(
-            hasProperty("sctid", is("764146007")),
-            hasProperty("sctid", is("6369005"))
+            hasProperty("code", is("764146007")),
+            hasProperty("code", is("6369005"))
         ));
     }
 
@@ -96,7 +106,7 @@ public class SnowstormClientParseTest {
             "  {\"name\":\"description\",\"valueString\":\"Penicillin\"}" +
             "]}]}");
 
-        List<SnomedConcept> values = SnowstormClient.parseAttributeValues(body, CAUSATIVE_AGENT);
+        List<CodedConcept> values = SnowstormClient.parseAttributeValues(body, CAUSATIVE_AGENT);
         assertThat(values, contains(hasProperty("display", is("Penicillin"))));
     }
 
