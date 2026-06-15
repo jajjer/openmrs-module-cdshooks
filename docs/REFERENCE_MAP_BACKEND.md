@@ -1,11 +1,11 @@
 # Reference-map terminology backend
 
-Following Andrew Kanter's feedback on the Talk thread, the matcher's **primary,
-default** path resolves drug→class parent-child links from the OpenMRS
-`concept_reference_term_map` table — a live Snowstorm server is an optional
-secondary source. This is the "service which can use that knowledge to provide
-the parent-child links" he described, using the table that "is intended to
-capture hierarchies and other relationships between reference codes."
+The matcher's **primary, default** path resolves drug→class parent-child links
+from the OpenMRS `concept_reference_term_map` table — a live Snowstorm server is
+an optional secondary source. That table is intended to capture hierarchies and
+other relationships between reference codes, which is exactly what a drug-class
+lookup needs: the RxClass NUI ↔ RxNORM CUI edges live there, and this backend is
+the service that walks them.
 
 > New to SNOMED CT / RxNorm / RxClass / CIEL and the two OpenMRS mapping tables?
 > Read [`TERMINOLOGY_PRIMER.md`](TERMINOLOGY_PRIMER.md) first — it explains the
@@ -16,7 +16,7 @@ capture hierarchies and other relationships between reference codes."
 The matcher originally led with a live Snowstorm instance over FHIR
 (`$lookup` / `$subsumes`), with this reference-map path as an opt-in backend.
 That priority is now inverted — the reference map is the default. Two problems
-Andrew and the SNOMED data check surfaced drove this:
+the SNOMED data check surfaced drove this:
 
 1. **CIEL SNOMED coverage is uneven.** Amoxicillin (CIEL 71160) — the worked
    example — has *zero* reference-term mappings on dev3, so the SNOMED bridge
@@ -107,7 +107,7 @@ to ignore warnings. The suppressed codes are configurable via
 `cdshooks.classMatchExcludedCodes` (defaults: SNOMED Substance, Pharmaceutical/
 biologic product, Medicinal product, Drug or medicament).
 
-## Still open (for Andrew / the thread)
+## Still open
 
 - **Canonical class anchor for allergens** — does the allergen concept map to
   the RxClass NUI directly, or to an ingredient CUI whose class we then climb?
