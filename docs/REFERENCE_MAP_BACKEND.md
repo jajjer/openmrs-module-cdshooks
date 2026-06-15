@@ -19,7 +19,8 @@ That priority is now inverted — the reference map is the default. Two problems
 the SNOMED data check surfaced drove this:
 
 1. **CIEL SNOMED coverage is uneven.** Amoxicillin (CIEL 71160) — the worked
-   example — has *zero* reference-term mappings on dev3, so the SNOMED bridge
+   example — has *zero* reference-term mappings on the OpenMRS reference demo
+   server, so the SNOMED bridge
    can't fire for it (see [`IMPLEMENTATION_NOTES.md`](IMPLEMENTATION_NOTES.md)).
 2. **RxNorm/RxClass is the more common drug-class source.** CIEL maps drugs to
    both SNOMED and RxNORM. RxClass publishes an explicit relationship between a

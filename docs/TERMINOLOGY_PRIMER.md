@@ -79,9 +79,10 @@ systems: a CIEL drug concept typically maps to a SNOMED code *and* an RxNorm
 code (often ATC/WHO too). CIEL is the hub; SNOMED/RxNorm/RxClass are the external
 authorities it points at.
 
-> ⚠ **The catch the spike found:** CIEL coverage is uneven. Acetaminophen (CIEL
+> ⚠ **The catch in practice:** CIEL coverage is uneven. Acetaminophen (CIEL
 > 70116) is richly mapped; Amoxicillin (CIEL 71160) had **zero** reference-term
-> mappings on the dev server. A path that depends on a code being present can
+> mappings on the OpenMRS reference demo server. A path that depends on a code
+> being present can
 > silently fail to fire — a key reason this module defaults to the RxClass/RxNorm
 > path, the mapping CIEL most reliably carries for drugs.
 
