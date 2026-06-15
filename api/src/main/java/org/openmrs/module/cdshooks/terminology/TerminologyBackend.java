@@ -19,7 +19,7 @@ import java.util.List;
  * The two terminology primitives the drug-allergy matcher needs, abstracted
  * away from any single terminology server.
  *
- * <p>The original spike spoke only to a live Snowstorm instance over FHIR
+ * <p>The matcher originally spoke only to a live Snowstorm instance over FHIR
  * ({@code $lookup} / {@code $subsumes}). Andrew Kanter's feedback on the Talk
  * thread pointed at a second, more OpenMRS-native source for the same
  * knowledge: the {@code concept_reference_term_map} table, which "is intended

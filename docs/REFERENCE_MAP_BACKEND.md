@@ -9,13 +9,13 @@ hierarchies and other relationships between reference codes."
 
 ## Why
 
-The original spike spoke only to a live Snowstorm instance over FHIR
-(`$lookup` / `$subsumes`). Two problems Andrew and the spike's own data check
+The matcher originally spoke only to a live Snowstorm instance over FHIR
+(`$lookup` / `$subsumes`). Two problems Andrew and the SNOMED data check
 surfaced:
 
 1. **CIEL SNOMED coverage is uneven.** Amoxicillin (CIEL 71160) — the worked
    example — has *zero* reference-term mappings on dev3, so the SNOMED bridge
-   can't fire for it (see `docs/spike/05-snomed-data-check.md`).
+   can't fire for it (see [`IMPLEMENTATION_NOTES.md`](IMPLEMENTATION_NOTES.md)).
 2. **RxNorm/RxClass is the more common drug-class source.** CIEL maps drugs to
    both SNOMED and RxNORM. RxClass publishes an explicit relationship between a
    drug class (NUI) and its member ingredient CUIs — exactly a parent-child
