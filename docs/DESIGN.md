@@ -1,6 +1,6 @@
 # Design Proposal: Allergy / Rx Conflict Warning in O3
 
-Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. Veronica and Andrew shared some really helpful direction there, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
+Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. The discussion there surfaced some really helpful direction, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
 
 ## Current Implementation Status
 
@@ -77,9 +77,9 @@ The matching has to work at two levels:
 
 The warning text should communicate which kind of match triggered, since the clinical reasoning differs.
 
-The natural first instinct is to model class relationships as OpenMRS concept sets (e.g., a "Penicillins" set with member concepts). Andrew flagged in the Talk thread that this is a long-term liability: the OpenMRS terminology team becomes the single point of failure for clinical accuracy, and a stale set means false negatives on safety-critical checks. That is the kind of bug that hurts patients and creates medical-legal exposure.
+The natural first instinct is to model class relationships as OpenMRS concept sets (e.g., a "Penicillins" set with member concepts). But this is a long-term liability: the OpenMRS terminology team becomes the single point of failure for clinical accuracy, and a stale set means false negatives on safety-critical checks. That is the kind of bug that hurts patients and creates medical-legal exposure.
 
-The proposal here follows Andrew's direction: anchor drug and allergen concepts to an external, maintained terminology via the existing `concept_reference_term_map` table, and query the class hierarchy from that terminology rather than duplicating it in OpenMRS.
+The proposal here takes the other route: anchor drug and allergen concepts to an external, maintained terminology via the existing `concept_reference_term_map` table, and query the class hierarchy from that terminology rather than duplicating it in OpenMRS.
 
 **Terminology: SNOMED CT.** SNOMED is the natural choice given Bahmni's existing precedent in the OpenMRS ecosystem and the existence of a mature open-source server (Snowstorm) that speaks FHIR. Licensing is free in many low/middle-income countries via the IHTSDO Member License — confirming the distro-wide licensing posture is one of the open questions below.
 
@@ -135,8 +135,9 @@ relationships, comparing like-to-like in the *substance* hierarchy:
    ingredient/class matches as above.
 
 These bridged substances are added to the same candidate comparison as the
-primary codes. As Andrew put it, "most people expect the drug allergen list, not
-findings… to be complete that would be a good long-term goal" — hence secondary.
+primary codes. Most allergies are recorded against the drug allergen list rather
+than as findings, so this finding-based bridge is a long-term completeness goal
+rather than the default — hence secondary.
 
 All lookups are concept-level and rarely change, and subsumption results are
 terminology-version-scoped — they are cached (see `cdshooks.cacheTtlSeconds`) to
@@ -178,7 +179,7 @@ The exact operation name (`$evaluate` vs. a search-style endpoint) is worth sett
 
 ## Frontend Integration
 
-- **Where it renders.** Inline on the order line in the medication order basket — not a modal, not only on save. Appears as soon as the drug is added, per Veronica's guidance.
+- **Where it renders.** Inline on the order line in the medication order basket — not a modal, not only on save. Appears as soon as the drug is added.
 - **What it says.** Template:
   > ⚠ Patient has a **{severity}** allergy to **{allergen}** (reaction: {reaction}). {Drug} {is | contains a} {allergen-class}.
 - **Behavior.** Soft warning by default; the clinician can proceed. Whether severe allergies should require a documented override reason is an open question (see below).
@@ -229,4 +230,4 @@ These are the calls I do not feel I should make alone. Feedback especially welco
 7. **Backward compatibility** for implementers leaning on convenience sets today — what should the migration story look like?
 8. **Canonical SNOMED reference frame.** Which hierarchy is authoritative for CIEL drug and allergen concepts — finding, substance, or product? The matching algorithm's bridging steps depend on this; CIEL currently appears to map drugs to *product* and allergens to *finding*, which is why the algorithm traverses `Has active ingredient` and `Causative agent` to meet in the *substance* hierarchy. Best confirmed with the CIEL/terminology maintainers.
 
-Thanks for reading — and thanks to Veronica and Andrew for the framing that made this proposal possible. Looking forward to feedback before I start on Phase 1.
+Thanks for reading — and thanks to everyone on the thread for the framing that made this proposal possible. Looking forward to feedback before I start on Phase 1.

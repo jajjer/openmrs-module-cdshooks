@@ -199,10 +199,10 @@ public class CdsHooksServiceImpl implements CdsHooksService {
 
     /**
      * Turn raw matches into Cards, collapsing all matches for the same allergen
-     * into a single Card. Andrew Kanter's guidance is that when a drug conflicts
-     * with one allergen on both ingredient and class, the warning should convey
-     * both — so a grouped Card lists every reason rather than emitting two Cards
-     * the clinician has to mentally reconcile.
+     * into a single Card. When a drug conflicts with one allergen on both
+     * ingredient and class, the warning should convey both — so a grouped Card
+     * lists every reason rather than emitting two Cards the clinician has to
+     * mentally reconcile.
      */
     private List<CdsHooksResponse.Card> toCards(List<AllergyMatch> matches) {
         // Preserve first-seen order so output is deterministic.

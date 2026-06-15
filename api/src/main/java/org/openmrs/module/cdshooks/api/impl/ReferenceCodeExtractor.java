@@ -27,8 +27,8 @@ import java.util.Set;
  * walking its concept mappings and keeping the ones from sources the matcher
  * understands.
  *
- * <p>Originally SNOMED-only. Per Andrew Kanter's Talk feedback, the matcher now
- * also resolves drug→class links from RxClass/RxNORM edges loaded into
+ * <p>Originally SNOMED-only. The matcher now also resolves drug→class links
+ * from RxClass/RxNORM edges loaded into
  * {@code concept_reference_term_map}, so this extractor surfaces SNOMED CT,
  * RxNORM and RxClass codes alike. The codes are returned together; each
  * configured {@link org.openmrs.module.cdshooks.terminology.TerminologyBackend}
@@ -40,7 +40,7 @@ import java.util.Set;
  * common naming variants in CIEL and custom dictionaries ("SNOMED CT",
  * "SNOMED", "RxNORM", "RxCUI", "RxClass", "NUI") are all recognised.
  *
- * <p>TODO (SNOMED product specificity, Andrew Kanter's caveat): when a concept
+ * <p>TODO (SNOMED product specificity): when a concept
  * carries multiple SNOMED <em>product</em> codes, the specific product code (the
  * one containing only the ingredient) should be preferred over the parent
  * "drug-containing product", falling back to the parent only when no specific

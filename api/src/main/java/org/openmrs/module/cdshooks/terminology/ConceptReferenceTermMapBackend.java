@@ -41,9 +41,9 @@ import java.util.concurrent.TimeUnit;
  * OpenMRS {@code concept_reference_term_map} table instead of a live
  * terminology server.
  *
- * <p>This is the "service which can use that knowledge to provide the
- * parent-child links" that Andrew Kanter described on the Talk thread. The
- * intended data shape is RxClass class edges loaded into
+ * <p>This is the service that provides the parent-child links from data the
+ * {@code concept_reference_term_map} table already captures. The intended data
+ * shape is RxClass class edges loaded into
  * {@code concept_reference_term_map}: an RxNORM ingredient CUI mapped
  * {@code NARROWER-THAN} an RxClass NUI (the drug class), e.g.
  * <em>amoxicillin (CUI) NARROWER-THAN penicillins (NUI)</em>. The same
