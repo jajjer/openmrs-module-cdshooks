@@ -18,10 +18,22 @@ public interface AllergyMatcher {
 
     /**
      * Find ingredient and class matches between the patient's allergies and an
-     * ordered drug. Both sides are described by their SNOMED CT codings; the
-     * matcher bridges from finding → substance (Causative agent) and product →
-     * substance (Has active ingredient) via the configured Snowstorm instance,
-     * then runs substance × substance subsumption.
+     * ordered drug. Both sides are described by their terminology reference
+     * codes (RxNORM CUIs, RxClass NUIs, SNOMED CT codes, …).
+     *
+     * <p><b>Primary path</b> — direct reference-code subsumption: the drug and
+     * allergen codes are compared head-on. Equal codes are an ingredient match;
+     * an allergen code that subsumes a drug code (e.g. an RxClass class NUI over
+     * an RxNORM ingredient CUI, walked through {@code concept_reference_term_map})
+     * is a class match. This is the first-class matcher.
+     *
+     * <p><b>Secondary path</b> — the SNOMED finding/product attribute bridge:
+     * when the configured backend exposes SNOMED attribute relationships, the
+     * matcher additionally expands allergen findings to their {@code Causative
+     * agent} substances and drug products to their {@code Has active ingredient}
+     * substances and compares those too. This augments coverage where SNOMED
+     * modelling is richer than the loaded reference-map edges; it is a
+     * "long-term completeness" path, not the lead.
      *
      * @param drug      the drug being prescribed
      * @param allergies the patient's recorded allergies

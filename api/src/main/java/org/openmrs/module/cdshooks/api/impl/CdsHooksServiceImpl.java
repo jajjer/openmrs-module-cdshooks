@@ -28,9 +28,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service("cdshooks.CdsHooksService")
 public class CdsHooksServiceImpl implements CdsHooksService {
@@ -103,7 +104,7 @@ public class CdsHooksServiceImpl implements CdsHooksService {
             if (privilegesAdded) removeProxyPrivileges();
         }
 
-        response.setCards(allMatches.stream().map(this::toCard).collect(Collectors.toList()));
+        response.setCards(toCards(allMatches));
         auditLogger.logInvocation(hookInstance, patientUuid, drugs, allMatches, CdsAuditLogger.Outcome.SUCCESS);
         return response;
     }
@@ -196,17 +197,70 @@ public class CdsHooksServiceImpl implements CdsHooksService {
         return concept.getUuid();
     }
 
-    private CdsHooksResponse.Card toCard(AllergyMatch m) {
+    /**
+     * Turn raw matches into Cards, collapsing all matches for the same allergen
+     * into a single Card. Andrew Kanter's guidance is that when a drug conflicts
+     * with one allergen on both ingredient and class, the warning should convey
+     * both — so a grouped Card lists every reason rather than emitting two Cards
+     * the clinician has to mentally reconcile.
+     */
+    private List<CdsHooksResponse.Card> toCards(List<AllergyMatch> matches) {
+        // Preserve first-seen order so output is deterministic.
+        Map<String, List<AllergyMatch>> byAllergen = new LinkedHashMap<>();
+        for (AllergyMatch m : matches) {
+            byAllergen.computeIfAbsent(m.getAllergenDisplay(), k -> new ArrayList<>()).add(m);
+        }
+        List<CdsHooksResponse.Card> cards = new ArrayList<>();
+        for (Map.Entry<String, List<AllergyMatch>> e : byAllergen.entrySet()) {
+            cards.add(toCard(e.getKey(), e.getValue()));
+        }
+        return cards;
+    }
+
+    private CdsHooksResponse.Card toCard(String allergenDisplay, List<AllergyMatch> group) {
+        boolean ingredient = false;
+        boolean klass = false;
+        AllergyMatch.Severity worstSeverity = null;
+        String reaction = null;
+        StringBuilder reasons = new StringBuilder();
+        for (AllergyMatch m : group) {
+            if (m.getMatchType() == AllergyMatch.MatchType.CLASS) klass = true; else ingredient = true;
+            worstSeverity = moreSevere(worstSeverity, m.getSeverity());
+            if (reaction == null && m.getReaction() != null) reaction = m.getReaction();
+            if (reasons.length() > 0) reasons.append('\n');
+            reasons.append(m.getExplanation());
+        }
+
         CdsHooksResponse.Card card = new CdsHooksResponse.Card();
         card.uuid = UUID.randomUUID().toString();
-        card.summary = "⚠ " + m.getAllergenDisplay()
-                + (m.getMatchType() == AllergyMatch.MatchType.CLASS ? " (class match)" : "");
-        card.detail = m.getExplanation()
-                + (m.getReaction() != null ? "\n\nRecorded reaction: " + m.getReaction() : "");
-        card.indicator = SeverityMapper.toCardIndicator(m.getSeverity());
+        card.summary = "⚠ " + allergenDisplay + " (" + matchTypeLabel(ingredient, klass) + ")";
+        card.detail = reasons
+                + (reaction != null ? "\n\nRecorded reaction: " + reaction : "");
+        card.indicator = SeverityMapper.toCardIndicator(worstSeverity);
         CdsHooksResponse.Card.Source source = new CdsHooksResponse.Card.Source();
         source.label = "OpenMRS Drug-Allergy Alert";
         card.source = source;
         return card;
+    }
+
+    private static String matchTypeLabel(boolean ingredient, boolean klass) {
+        if (ingredient && klass) return "ingredient and class match";
+        return klass ? "class match" : "ingredient match";
+    }
+
+    /** Returns the more clinically severe of two severities (SEVERE &gt; MODERATE &gt; MILD &gt; UNKNOWN). */
+    private static AllergyMatch.Severity moreSevere(AllergyMatch.Severity a, AllergyMatch.Severity b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return severityRank(a) >= severityRank(b) ? a : b;
+    }
+
+    private static int severityRank(AllergyMatch.Severity s) {
+        switch (s) {
+            case SEVERE:   return 3;
+            case MODERATE: return 2;
+            case MILD:     return 1;
+            default:       return 0;
+        }
     }
 }

@@ -57,10 +57,10 @@ public class TerminologyBackendRouterTest {
     }
 
     @Test
-    public void nullMode_defaultsToSnowstorm() {
-        when(snowstorm.subsumes("a", "b")).thenReturn(SubsumptionOutcome.SUBSUMES);
+    public void nullMode_defaultsToReferenceMap() {
+        when(referenceMap.subsumes("a", "b")).thenReturn(SubsumptionOutcome.SUBSUMES);
         assertThat(router(null).subsumes("a", "b"), is(SubsumptionOutcome.SUBSUMES));
-        verifyNoInteractions(referenceMap);
+        verifyNoInteractions(snowstorm);
     }
 
     @Test
@@ -78,10 +78,10 @@ public class TerminologyBackendRouterTest {
     }
 
     @Test
-    public void unrecognisedMode_defaultsToSnowstorm() {
-        when(snowstorm.subsumes("a", "b")).thenReturn(SubsumptionOutcome.SUBSUMES);
+    public void unrecognisedMode_defaultsToReferenceMap() {
+        when(referenceMap.subsumes("a", "b")).thenReturn(SubsumptionOutcome.SUBSUMES);
         assertThat(router("wat").subsumes("a", "b"), is(SubsumptionOutcome.SUBSUMES));
-        verifyNoInteractions(referenceMap);
+        verifyNoInteractions(snowstorm);
     }
 
     @Test

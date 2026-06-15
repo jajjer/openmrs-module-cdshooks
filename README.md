@@ -2,8 +2,15 @@
 
 Exposes OpenMRS as a [CDS-Hooks 2.0](https://cds-hooks.hl7.org/2.0/) service host.
 The first bundled service is a **drug-allergy alert** that warns prescribers
-when an ordered drug conflicts with the patient's recorded allergies
-(ingredient or class match via SNOMED CT).
+when an ordered drug conflicts with the patient's recorded allergies — both on
+ingredient and on drug class.
+
+The allergens come from the patient's **drug allergen list**
+(`patientService.getAllergies`), not from findings/conditions, and drug→class
+relationships are resolved from **RxClass/RxNORM edges loaded into
+`concept_reference_term_map`** — the direction Andrew Kanter set on the Talk
+thread. A live SNOMED CT (Snowstorm) bridge is available as an optional,
+secondary path for long-term completeness.
 
 ## Architecture
 
@@ -12,19 +19,39 @@ Frontend (esm-patient-chart)
    │
    │ POST /ws/cds-services/drug-allergy
    ▼
-CdsServicesController  ──>  CdsHooksService  ──>  SubsumptionClient
-                                                       │
-                                                       ▼ FHIR $lookup / $subsumes
-                                                  Snowstorm (SNOMED CT)
+CdsServicesServlet  ──>  CdsHooksService  ──>  AllergyMatcher
+                                                    │
+                                                    ▼  TerminologyBackendRouter
+                          ┌─────────────────────────┴─────────────────────────┐
+              (default)   ▼                                                     ▼  (optional, secondary)
+     ConceptReferenceTermMapBackend                                   SnowstormClient (SNOMED CT)
+     RxNORM CUI → RxClass NUI                                         FHIR $lookup / $subsumes
+     via concept_reference_term_map                                   + finding/product attribute bridge
 ```
 
-The matching algorithm bridges three SNOMED hierarchies:
+**Primary path — RxClass/RxNORM via `concept_reference_term_map`.** Drug and
+allergen concepts carry RxNORM CUI and/or RxClass NUI reference terms. The
+matcher compares those codes directly:
 
-- **Allergen findings** (e.g., "Allergy to penicillin") via `Causative agent` (SCTID 246075003) → substance(s)
-- **Drug products** (e.g., "Amoxicillin-containing product") via `Has active ingredient` (SCTID 127489000) → substance(s)
-- Substance × substance `$subsumes` for ingredient and class matches
+- **Ingredient match** — drug and allergen resolve to the same code.
+- **Class match** — an allergen class NUI subsumes the drug ingredient CUI
+  (e.g. *amoxicillin (CUI) NARROWER-THAN penicillins (NUI)*), walked through the
+  `NARROWER-THAN` / `BROADER-THAN` / `SAME-AS` edges in
+  `concept_reference_term_map`. No terminology server required.
 
-See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design proposal and [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for contributor notes (local setup, SNOMED modeling findings, and OpenMRS-platform gotchas).
+**Secondary path — SNOMED CT attribute bridge (optional).** When a Snowstorm
+backend is configured, the matcher additionally bridges the allergen *finding*
+hierarchy and the drug *product* hierarchy into the *substance* hierarchy via
+`Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID
+127489000), then runs substance × substance `$subsumes`. This adds coverage
+where SNOMED modelling is richer than the loaded reference-map edges; "to be
+complete that would be a good long-term goal," as Andrew put it.
+
+See [`docs/REFERENCE_MAP_BACKEND.md`](docs/REFERENCE_MAP_BACKEND.md) for the
+primary path, [`docs/DESIGN.md`](docs/DESIGN.md) for the full design proposal,
+and [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for
+contributor notes (local setup, SNOMED modeling findings, and OpenMRS-platform
+gotchas).
 
 ## Module structure
 
@@ -94,13 +121,16 @@ Global properties:
 
 | Property | Default | Description |
 |---|---|---|
-| `cdshooks.snowstormUrl` | `https://tx.fhir.org/r4` | Base FHIR URL of the SNOMED terminology server |
+| `cdshooks.terminologyBackend` | `referenceMap` | Source for parent-child / subsumption lookups: `referenceMap` (default — local `concept_reference_term_map`, e.g. RxClass NUI/CUI edges), `snowstorm` (live FHIR + SNOMED attribute bridge, secondary), or `both`. See [docs/REFERENCE_MAP_BACKEND.md](docs/REFERENCE_MAP_BACKEND.md). |
+| `cdshooks.snowstormUrl` | `https://tx.fhir.org/r4` | Base FHIR URL of the SNOMED terminology server (only used by the `snowstorm`/`both` backends) |
 | `cdshooks.snomedSystem` | `http://snomed.info/sct` | FHIR system URI for SNOMED CT codes |
-| `cdshooks.terminologyBackend` | `snowstorm` | Source for parent-child / subsumption lookups: `snowstorm` (live FHIR), `referenceMap` (local `concept_reference_term_map`, e.g. RxClass NUI/CUI edges), or `both`. See [docs/REFERENCE_MAP_BACKEND.md](docs/REFERENCE_MAP_BACKEND.md). |
 | `cdshooks.cacheTtlSeconds` | `3600` | TTL for cached terminology lookups |
 
 ## Compatibility
 
 - OpenMRS Platform 2.6+
 - FHIR2 module 2.4+
-- SNOMED CT (any version exposing the `Causative agent` and `Has active ingredient` attributes — i.e. modern editions)
+- Primary path: RxClass/RxNORM edges loaded into `concept_reference_term_map`
+  (via `openmrs-module-initializer`) — no terminology server required
+- Optional secondary path: SNOMED CT via Snowstorm (any version exposing the
+  `Causative agent` and `Has active ingredient` attributes — i.e. modern editions)

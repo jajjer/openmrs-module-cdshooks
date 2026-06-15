@@ -147,6 +147,38 @@ public class CdsHooksServiceImplTest {
         assertThat(card.detail, startsWith("Amoxicillin contains Amoxicillin (substance)"));
     }
 
+    @Test
+    public void bothMatchesForOneAllergen_collapseIntoSingleCard() throws Exception {
+        Patient patient = new Patient();
+        when(patientService.getPatientByUuid(PATIENT_UUID)).thenReturn(patient);
+
+        Allergies allergies = new Allergies();
+        allergies.add(buildAllergy("Allergy to penicillins", "Moderate", "Rash"));
+        when(patientService.getAllergies(patient)).thenReturn(allergies);
+
+        // Same allergen matched twice: once on ingredient, once on class. The
+        // service must collapse these into ONE card that conveys both reasons,
+        // taking the worst severity.
+        when(matcher.match(any(), any())).thenReturn(List.of(
+                new AllergyMatch("Allergy to penicillins", AllergyMatch.MatchType.INGREDIENT,
+                        AllergyMatch.Severity.MODERATE, "Rash",
+                        "Amoxicillin contains amoxicillin, which the patient is allergic to."),
+                new AllergyMatch("Allergy to penicillins", AllergyMatch.MatchType.CLASS,
+                        AllergyMatch.Severity.SEVERE, "Rash",
+                        "Amoxicillin is a penicillins; the patient has a recorded allergy to penicillins.")));
+
+        CdsHooksResponse resp = service.evaluateDrugAllergy(buildRequest(PATIENT_UUID, "27658006"));
+
+        assertThat(resp.getCards(), hasSize(1));
+        CdsHooksResponse.Card card = resp.getCards().get(0);
+        assertThat(card.summary, is("⚠ Allergy to penicillins (ingredient and class match)"));
+        // Worst severity (SEVERE) wins the indicator.
+        assertThat(card.indicator, is("critical"));
+        assertThat(card.detail, org.hamcrest.Matchers.containsString("which the patient is allergic to"));
+        assertThat(card.detail, org.hamcrest.Matchers.containsString("recorded allergy to penicillins"));
+        assertThat(card.detail, org.hamcrest.Matchers.containsString("Recorded reaction: Rash"));
+    }
+
     /* -------------------- helpers -------------------- */
 
     private CdsHooksRequest buildRequest(String patientUuid, String drugSctid) throws Exception {

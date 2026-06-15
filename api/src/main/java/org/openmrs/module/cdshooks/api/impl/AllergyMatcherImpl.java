@@ -27,20 +27,28 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Cross-hierarchy SNOMED matcher: bridges the allergen *finding* hierarchy and
- * the drug *product* hierarchy via SNOMED attribute relationships, comparing
- * like-to-like in the *substance* hierarchy.
+ * Drug-allergy matcher built around <b>direct reference-code subsumption</b> as
+ * the primary path, with the SNOMED finding/product attribute bridge layered on
+ * as a secondary augmentation.
  *
- * <p>For each allergy, the matcher collects the set of "candidate substances"
- * implicated by the allergen — the allergen's own SNOMED code, plus the values
- * of its {@code Causative agent} attribute if it is a finding. For the drug,
- * it collects the substances pointed to by {@code Has active ingredient} plus
- * the drug's own SNOMED code. Then it checks every (allergen-substance,
- * drug-substance) pair for ingredient or class match.
+ * <p><b>Primary — direct code comparison.</b> For each (allergen code, drug
+ * code) pair the matcher asks the terminology backend directly: equal codes are
+ * an ingredient match; an allergen code that subsumes the drug code is a class
+ * match. This is exactly the RxNORM CUI → RxClass NUI class lookup the
+ * {@code referenceMap} backend (the default) is built for — amoxicillin (CUI)
+ * {@code NARROWER-THAN} penicillins (NUI), walked through
+ * {@code concept_reference_term_map}.
  *
- * <p>The "include self" union handles both common mapping shapes: an OpenMRS
- * allergen mapped directly to a SNOMED substance, or one mapped to a finding
- * whose causative agent points to the substance.
+ * <p><b>Secondary — SNOMED attribute bridge.</b> When the backend exposes SNOMED
+ * attribute relationships (i.e. Snowstorm), the candidate set for each side is
+ * additionally expanded: an allergen finding contributes its {@code Causative
+ * agent} substances and a drug product contributes its {@code Has active
+ * ingredient} substances ({@link #expandCandidates}). The backend used by
+ * default ({@code referenceMap}) returns no attribute values, so this expansion
+ * is a no-op there; it adds SNOMED-modelled coverage where the loaded
+ * reference-map edges are thin. Both the self code (primary) and any bridged
+ * substances (secondary) are compared, so an allergen that matches on both the
+ * ingredient and the class surfaces both.
  */
 @Service("cdshooks.AllergyMatcher")
 public class AllergyMatcherImpl implements AllergyMatcher {
@@ -55,9 +63,9 @@ public class AllergyMatcherImpl implements AllergyMatcher {
             return List.of();
         }
 
-        Set<CodedConcept> drugSubstances = expandToSubstances(
+        Set<CodedConcept> drugCandidates = expandCandidates(
                 drug.referenceCodes, CdsHooksConstants.SCTID_HAS_ACTIVE_INGREDIENT);
-        if (drugSubstances.isEmpty()) {
+        if (drugCandidates.isEmpty()) {
             return List.of();
         }
 
@@ -66,11 +74,11 @@ public class AllergyMatcherImpl implements AllergyMatcher {
         Set<String> excludedClassCodes = excludedClassCodes();
 
         for (AllergyInput allergy : allergies) {
-            Set<CodedConcept> allergenSubstances = expandToSubstances(
+            Set<CodedConcept> allergenCandidates = expandCandidates(
                     allergy.referenceCodes, CdsHooksConstants.SCTID_CAUSATIVE_AGENT);
 
-            for (CodedConcept allergenSubstance : allergenSubstances) {
-                for (CodedConcept drugSubstance : drugSubstances) {
+            for (CodedConcept allergenSubstance : allergenCandidates) {
+                for (CodedConcept drugSubstance : drugCandidates) {
                     AllergyMatch m = compareSubstances(
                             allergy, drug, allergenSubstance, drugSubstance, excludedClassCodes);
                     if (m == null) continue;
@@ -85,30 +93,31 @@ public class AllergyMatcherImpl implements AllergyMatcher {
     }
 
     /**
-     * Resolve a list of seed SCTIDs to a deduplicated set of "substance
-     * candidates" for matching.
+     * Build the set of candidate codes to compare for one side (drug or
+     * allergen).
      *
-     * <p>Strategy: for each seed, query the bridging attribute (Causative
-     * agent on allergen findings, Has active ingredient on drug products).
-     * If the seed has bridging values, use those. If it has none, fall back
-     * to the seed itself — this handles the case where an OpenMRS concept is
-     * mapped directly to a SNOMED substance code rather than to a finding or
-     * product. The fall-back is conditional rather than unconditional to
-     * avoid spurious matches between root-of-hierarchy concepts (e.g., an
-     * allergen finding listing "Pharmaceutical / biologic product" as one of
-     * its causative agents would otherwise trivially subsume every drug
-     * product).
+     * <p><b>Primary:</b> every seed reference code is included as-is, so the
+     * default {@code referenceMap} path compares the drug and allergen codes
+     * directly (the RxNORM CUI → RxClass NUI class lookup).
+     *
+     * <p><b>Secondary:</b> each seed is also expanded through the SNOMED
+     * bridging attribute — {@code Causative agent} on allergen findings,
+     * {@code Has active ingredient} on drug products — and any resulting
+     * substances are added to the candidate set. Backends without attribute
+     * relationships (the default {@code referenceMap}) return nothing here, so
+     * this contributes only when Snowstorm is in play. Over-broad bridged
+     * substances are not a problem for ingredient matching (codes must be
+     * equal) and are screened out of class matching by
+     * {@link #excludedClassCodes()}.
      */
-    private Set<CodedConcept> expandToSubstances(List<String> seedSctids, String attributeSctid) {
+    private Set<CodedConcept> expandCandidates(List<String> seedCodes, String attributeSctid) {
         Set<CodedConcept> out = new LinkedHashSet<>();
-        if (seedSctids == null) return out;
-        for (String sctid : seedSctids) {
-            List<CodedConcept> bridged = terminology.getAttributeValues(sctid, attributeSctid);
-            if (bridged.isEmpty()) {
-                out.add(new CodedConcept(sctid, null));
-            } else {
-                out.addAll(bridged);
-            }
+        if (seedCodes == null) return out;
+        for (String code : seedCodes) {
+            // Primary: the code itself.
+            out.add(new CodedConcept(code, null));
+            // Secondary: SNOMED attribute bridge (no-op for referenceMap).
+            out.addAll(terminology.getAttributeValues(code, attributeSctid));
         }
         return out;
     }
@@ -168,21 +177,25 @@ public class AllergyMatcherImpl implements AllergyMatcher {
         return codes.isEmpty() ? CdsHooksConstants.DEFAULT_EXCLUDED_CLASS_CODES : codes;
     }
 
+    /**
+     * Terminology-neutral explanation. Avoids SNOMED-model vocabulary
+     * ("causative agent") so the text reads correctly on the primary RxClass
+     * path as well as the secondary SNOMED bridge.
+     */
     private static String explain(DrugInput drug, CodedConcept drugSubstance,
                                    AllergyInput allergy, CodedConcept allergenSubstance,
                                    AllergyMatch.MatchType type) {
-        String ingredientDisplay = displayOrSctid(drugSubstance);
-        String classDisplay = displayOrSctid(allergenSubstance);
+        String ingredientDisplay = displayOrCode(drugSubstance);
+        String classDisplay = displayOrCode(allergenSubstance);
         if (type == AllergyMatch.MatchType.INGREDIENT) {
             return drug.display + " contains " + ingredientDisplay
-                    + ", the causative agent of " + allergy.display + ".";
+                    + ", which the patient is allergic to.";
         }
-        return drug.display + " contains " + ingredientDisplay
-                + ", which is a " + classDisplay
-                + " — the causative-agent class for " + allergy.display + ".";
+        return drug.display + " is a " + classDisplay
+                + "; the patient has a recorded allergy to " + classDisplay + ".";
     }
 
-    private static String displayOrSctid(CodedConcept c) {
+    private static String displayOrCode(CodedConcept c) {
         return (c.getDisplay() != null && !c.getDisplay().isBlank()) ? c.getDisplay() : c.getCode();
     }
 }

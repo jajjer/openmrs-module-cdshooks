@@ -11,7 +11,9 @@
     <author>OpenMRS</author>
     <description>
         Exposes OpenMRS as a CDS-Hooks 2.0 service host. The first service
-        bundled is a drug-allergy alert via SNOMED CT.
+        bundled is a drug-allergy alert that resolves drug→class relationships
+        from RxClass/RxNORM edges in concept_reference_term_map (with an optional
+        SNOMED CT bridge).
     </description>
 
     <activator>org.openmrs.module.cdshooks.CdsHooksActivator</activator>
@@ -37,8 +39,8 @@
 
     <globalProperty>
         <property>cdshooks.terminologyBackend</property>
-        <defaultValue>snowstorm</defaultValue>
-        <description>Source for parent-child / subsumption lookups: "snowstorm" (live FHIR $lookup/$subsumes, default), "referenceMap" (local concept_reference_term_map edges — e.g. RxClass NUI/CUI class relationships loaded via Initializer, no terminology server required), or "both" (reference map first, Snowstorm as confirmation; any positive ancestry answer wins).</description>
+        <defaultValue>referenceMap</defaultValue>
+        <description>Source for parent-child / subsumption lookups: "referenceMap" (default — local concept_reference_term_map edges, e.g. RxClass NUI/CUI class relationships loaded via Initializer, no terminology server required), "snowstorm" (live FHIR $lookup/$subsumes plus the SNOMED finding/product attribute bridge — a secondary "long-term completeness" path), or "both" (reference map first, Snowstorm as confirmation; any positive ancestry answer wins).</description>
     </globalProperty>
 
     <globalProperty>
