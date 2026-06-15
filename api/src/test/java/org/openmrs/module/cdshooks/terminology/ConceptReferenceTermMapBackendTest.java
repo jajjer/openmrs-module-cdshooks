@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 /**
  * Verifies the {@code concept_reference_term_map} backend answers parent-child
  * questions from locally loaded reference-term edges — the RxClass NUI/CUI
- * class relationships Andrew Kanter described on the Talk thread.
+ * class relationships the reference-map path is built on.
  *
  * <p>Worked example mirrors the SNOMED matching example but with RxNorm/RxClass codes:
  * amoxicillin (RxNORM CUI) is {@code NARROWER-THAN} penicillins (RxClass NUI),
