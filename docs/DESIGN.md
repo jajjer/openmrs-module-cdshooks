@@ -2,11 +2,11 @@
 
 Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. Veronica and Andrew shared some really helpful direction there, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
 
-## Current Implementation Status (spike)
+## Current Implementation Status
 
-The architecture below has been **prototyped end-to-end** against OpenMRS Platform 2.8.4. Source: see the rest of this repository — `omod/` and `api/` Maven modules, with 11 unit tests.
+The architecture below has been **prototyped end-to-end** against OpenMRS Platform 2.8.4. Source: see the rest of this repository — `omod/` and `api/` Maven modules, with unit tests.
 
-**Live demo against the spike's isolated stack:**
+**Live demo against the isolated dev stack** (`dev/docker-compose.yml`):
 
 ```bash
 # Discovery
@@ -35,20 +35,20 @@ curl -b cookies.txt -X POST http://localhost:8081/openmrs/ws/cds-services/drug-a
 # }
 ```
 
-The matching algorithm (Java port of the v2 Python spike) bridges three SNOMED hierarchies via the `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID 127489000) attribute relationships, as described in the architecture section below.
+The matching algorithm (`AllergyMatcherImpl`) bridges three SNOMED hierarchies via the `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID 127489000) attribute relationships, as described in the architecture section below.
 
-**What the spike validated:**
+**What's validated:**
 
 - ✅ CDS-Hooks 2.0 discovery + invocation work at the spec-compliant `/openmrs/ws/cds-services` URL
 - ✅ Cross-hierarchy SNOMED traversal correctly identifies Amoxicillin as a penicillin
 - ✅ Severity → CDS-Hooks `indicator` mapping (SEVERE → critical) works
 - ✅ Module loads cleanly without modifying `openmrs-core`, `openmrs-module-fhir2`, or `esm-patient-medications-app`
 
-**Known gaps (tracked in repo issues / SPIKE_JOURNAL.md):**
+**Known gaps (see [`IMPLEMENTATION_NOTES.md`](IMPLEMENTATION_NOTES.md)):**
 
-- POST requires session-cookie auth; basic auth doesn't establish a privileged user context. Production answer is bearer-token auth per CDS-Hooks 2.0 security spec.
+- Basic auth alone doesn't establish a privileged user context for POST invocation; the service grants itself minimum read privileges as a workaround. The endpoint also supports HS256 bearer-token auth per the CDS-Hooks 2.0 security spec when an HMAC secret is configured.
 - Matching can return noisy "matched against root-of-hierarchy" cards. Needs a filter for overly-broad class concepts.
-- Frontend extension package (`esm-cdshooks-app`) not yet built. The integration point in `esm-patient-chart` is already identified — `order-item-additional-info-slot` on each line of the medication order basket.
+- Frontend extension package (`esm-cdshooks-app`) renders into `order-item-additional-info-slot` on each line of the medication order basket; not yet wired into a packaged distro build.
 
 ---
 
@@ -93,14 +93,32 @@ The proposal here follows Andrew's direction: anchor drug and allergen concepts 
 
 ### Matching algorithm
 
+A naive sketch would resolve the drug and allergen to SNOMED codes and call
+`$subsumes` directly. That does not work: allergen concepts map to the SNOMED
+*finding* hierarchy (e.g., "Allergy to penicillin (finding)") while drug
+concepts map to the *medicinal product* hierarchy. These trees are parallel, so
+a cross-hierarchy `$subsumes` returns `not-subsumed`. The algorithm has to
+bridge them via SNOMED attribute relationships, comparing like-to-like in the
+*substance* hierarchy.
+
 Given an ordered drug `D` and a patient's allergy list `A`:
 
-1. Resolve `D` to its SNOMED reference term(s).
-2. For each allergy `a` in `A`, resolve to its SNOMED reference term(s).
-3. For each pair, query Snowstorm:
-   - **Ingredient match**: any reference term in common.
-   - **Class match**: any reference term of `D` is a descendant of any reference term of `a` in the SNOMED `is-a` hierarchy (FHIR `$subsumes` operation, or ECL query).
+1. Resolve `D` to its SNOMED product code(s), then `$lookup` each to read its
+   `Has active ingredient` (SCTID 127489000) values — the substance(s) `D`
+   contains.
+2. For each allergy `a` in `A`, resolve to its SNOMED finding code(s), then
+   `$lookup` each to read its `Causative agent` (SCTID 246075003) values — the
+   substance(s) the patient reacts to.
+3. For each (drug substance, allergen substance) pair, query Snowstorm:
+   - **Ingredient match**: the two substances are the same code.
+   - **Class match**: the drug substance is a descendant of the allergen
+     substance in the SNOMED `is-a` hierarchy (FHIR `$subsumes`, or ECL query) —
+     e.g., Amoxicillin *is-a* Penicillin.
 4. Return matches with `{ allergen, matchType: ingredient | class, severity, reaction, explanation }`.
+
+The per-allergen and per-drug substance lookups are concept-level and rarely
+change, and `$subsumes` results are SNOMED-version-scoped — all three are cached
+(see `cdshooks.cacheTtlSeconds`) to keep per-order-add latency acceptable.
 
 ### Where the logic lives
 
@@ -187,5 +205,6 @@ These are the calls I do not feel I should make alone. Feedback especially welco
 5. **Performance budget** — is per-drug-add lookup acceptable, or do we need batch / client-side caching of common patient-allergy combinations?
 6. **FHIR operation shape** — `$evaluate` parameters resource, or something else? Best answered by the `openmrs-module-fhir2` maintainers.
 7. **Backward compatibility** for implementers leaning on convenience sets today — what should the migration story look like?
+8. **Canonical SNOMED reference frame.** Which hierarchy is authoritative for CIEL drug and allergen concepts — finding, substance, or product? The matching algorithm's bridging steps depend on this; CIEL currently appears to map drugs to *product* and allergens to *finding*, which is why the algorithm traverses `Has active ingredient` and `Causative agent` to meet in the *substance* hierarchy. Best confirmed with the CIEL/terminology maintainers.
 
 Thanks for reading — and thanks to Veronica and Andrew for the framing that made this proposal possible. Looking forward to feedback before I start on Phase 1.

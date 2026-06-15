@@ -27,8 +27,8 @@ import static org.hamcrest.Matchers.is;
 
 /**
  * Direct tests for the JSON-parsing logic of SnowstormClient. The HTTP layer
- * is exercised by the spike's curl scripts and by AllergyMatcherImplTest with
- * a mocked client; this test pins the FHIR Parameters response interpretation.
+ * is exercised by AllergyMatcherImplTest with a mocked client; this test pins
+ * the FHIR Parameters response interpretation.
  */
 public class SnowstormClientParseTest {
 

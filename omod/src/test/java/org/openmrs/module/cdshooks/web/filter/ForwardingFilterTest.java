@@ -31,7 +31,7 @@ import static org.junit.Assert.assertThrows;
  */
 public class ForwardingFilterTest {
 
-    private static final String SECRET = "spike-secret-spike-secret-spike-secret-spike";
+    private static final String SECRET = "test-secret-test-secret-test-secret-test-secret";
     private static final String OTHER_SECRET = "different-different-different-different-different";
     private static final String ISSUER = "https://openmrs.example.org/cds-hooks";
 

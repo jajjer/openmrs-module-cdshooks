@@ -27,7 +27,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Java port of the v2 spike algorithm in {@code .context/spike/06-match-v2.py}.
+ * Cross-hierarchy SNOMED matcher: bridges the allergen *finding* hierarchy and
+ * the drug *product* hierarchy via SNOMED attribute relationships, comparing
+ * like-to-like in the *substance* hierarchy.
  *
  * <p>For each allergy, the matcher collects the set of "candidate substances"
  * implicated by the allergen — the allergen's own SNOMED code, plus the values

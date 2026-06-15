@@ -2,7 +2,7 @@
 #
 # Requires a SNOMED CT release file (RF2 zip) loaded after startup:
 #   1. Register at https://www.snomed.org/ and download the International Edition release.
-#   2. Start the stack: docker compose -f docker-compose.snowstorm.yml up -d
+#   2. Start the stack: docker compose -f dev/docker-compose.snowstorm.yml up -d
 #   3. Wait ~30s for Elasticsearch + Snowstorm to come up.
 #   4. Import: see https://github.com/IHTSDO/snowstorm/blob/master/docs/loading-snomed.md
 #

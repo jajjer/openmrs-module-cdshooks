@@ -39,7 +39,7 @@ import static org.mockito.Mockito.when;
  * questions from locally loaded reference-term edges — the RxClass NUI/CUI
  * class relationships Andrew Kanter described on the Talk thread.
  *
- * <p>Worked example mirrors the SNOMED spike but with RxNorm/RxClass codes:
+ * <p>Worked example mirrors the SNOMED matching example but with RxNorm/RxClass codes:
  * amoxicillin (RxNORM CUI) is {@code NARROWER-THAN} penicillins (RxClass NUI),
  * so an amoxicillin order should subsume into a penicillin allergy class.
  */

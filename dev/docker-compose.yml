@@ -1,8 +1,8 @@
-# Standalone, isolated stack for testing the cdshooks module.
-# Does not share state with the sibling workspace's RefApp backend.
+# Standalone, isolated stack for local testing of the cdshooks module.
+# Pulls the official OpenMRS RefApp 3 images (gateway, frontend, backend) plus MariaDB.
 #
-# Usage from the workspace root:
-#   docker compose -p cdshooks-dev -f .context/spike/cdshooks-dev/docker-compose.yml up -d
+# Usage from the repository root:
+#   docker compose -p cdshooks-dev -f dev/docker-compose.yml up -d
 #
 # Frontend will be at http://localhost:8081/openmrs/spa
 # REST/FHIR at http://localhost:8081/openmrs/ws/...

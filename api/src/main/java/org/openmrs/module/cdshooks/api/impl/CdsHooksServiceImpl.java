@@ -66,9 +66,9 @@ public class CdsHooksServiceImpl implements CdsHooksService {
             return response;
         }
 
-        // Spike shortcut: grant the minimum read privileges this service needs
-        // for the duration of the call. The production path is bearer-token
-        // auth that establishes a real user context — see docs/SPIKE_JOURNAL.md.
+        // Grant the minimum read privileges this service needs for the duration
+        // of the call. The production path is bearer-token auth that establishes
+        // a real user context — see docs/IMPLEMENTATION_NOTES.md.
         boolean privilegesAdded = addProxyPrivileges();
         List<AllergyMatch> allMatches = new ArrayList<>();
         try {
@@ -178,7 +178,7 @@ public class CdsHooksServiceImpl implements CdsHooksService {
      * service context for locale resolution.
      *
      * <p>TODO: pick up the OpenMRS default-locale global property at runtime
-     * instead of hardcoding English. For the spike this is good enough.
+     * instead of hardcoding English. This is good enough for now.
      */
     private static String conceptDisplay(org.openmrs.Concept concept) {
         if (concept == null) return null;

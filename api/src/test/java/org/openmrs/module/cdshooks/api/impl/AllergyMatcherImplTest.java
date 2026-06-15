@@ -35,14 +35,14 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the Java port reproduces the v2 Python spike result for the
- * worked example: a patient with a penicillin allergy and an Amoxicillin
- * order should produce a CLASS match.
+ * Verifies the matcher produces the expected result for the worked example:
+ * a patient with a penicillin allergy and an Amoxicillin order should produce
+ * a CLASS match.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class AllergyMatcherImplTest {
 
-    // SNOMED SCTIDs from the spike data check
+    // SNOMED SCTIDs from the SNOMED data check
     private static final String FINDING_PENICILLIN_ALLERGY = "91936005";
     private static final String SUBSTANCE_PENICILLIN = "764146007";
     private static final String PRODUCT_AMOXICILLIN = "27658006";

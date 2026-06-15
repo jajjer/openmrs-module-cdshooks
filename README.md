@@ -24,27 +24,31 @@ The matching algorithm bridges three SNOMED hierarchies:
 - **Drug products** (e.g., "Amoxicillin-containing product") via `Has active ingredient` (SCTID 127489000) → substance(s)
 - Substance × substance `$subsumes` for ingredient and class matches
 
-See `docs/DESIGN.md` for the full design proposal and `docs/SPIKE_JOURNAL.md` for the spike journey.
+See [`docs/DESIGN.md`](docs/DESIGN.md) for the full design proposal and [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for contributor notes (local setup, SNOMED modeling findings, and OpenMRS-platform gotchas).
 
 ## Module structure
 
 ```
 .
-├── api/                      # Service layer
-│   └── src/main/java/org/openmrs/module/cdshooks/
-│       ├── api/              # Service interface
-│       ├── api/impl/         # Service implementation
-│       ├── client/           # Snowstorm FHIR client (pending)
-│       ├── model/            # CDS-Hooks request/response DTOs
-│       ├── CdsHooksActivator.java
-│       └── CdsHooksConstants.java
-└── omod/                     # Web layer
-    └── src/main/
-        ├── java/.../web/controller/
-        │   └── CdsServicesController.java
-        └── resources/
-            ├── config.xml
-            └── webModuleApplicationContext.xml
+├── api/                          # Service layer
+│   ├── src/main/java/.../cdshooks/
+│   │   ├── api/                  # Service interfaces (CdsHooksService, AllergyMatcher)
+│   │   ├── api/impl/             # Service + matcher impl, request parser, severity/audit
+│   │   ├── client/               # Snowstorm FHIR client + TTL cache
+│   │   ├── terminology/          # Pluggable subsumption backends (Snowstorm / reference-map)
+│   │   ├── model/                # CDS-Hooks request/response DTOs
+│   │   └── CdsHooksConstants.java
+│   └── src/main/resources/moduleApplicationContext.xml
+├── omod/                         # Web layer
+│   └── src/main/
+│       ├── java/.../cdshooks/
+│       │   ├── CdsHooksActivator.java
+│       │   └── web/
+│       │       ├── servlet/CdsServicesServlet.java   # CDS-Hooks discovery + invocation
+│       │       └── filter/ForwardingFilter.java      # /ws/cds-services URL + bearer auth
+│       └── resources/config.xml
+├── frontend/esm-cdshooks-app/    # ESM micro-frontend (drug-allergy alert extension)
+└── e2e/                          # Playwright end-to-end tests
 ```
 
 ## Build
@@ -56,6 +60,33 @@ mvn clean install
 ```
 
 The OMOD will be at `omod/target/cdshooks-1.0.0-SNAPSHOT.omod`.
+
+## Local development
+
+The `dev/` directory holds Docker Compose stacks for running the module against
+a real OpenMRS RefApp. These reference the official published OpenMRS images;
+nothing is bundled in this repo.
+
+```bash
+# Full OpenMRS RefApp 3 stack (gateway + frontend + backend + MariaDB)
+docker compose -p cdshooks-dev -f dev/docker-compose.yml up -d
+# Frontend:    http://localhost:8081/openmrs/spa
+# REST/FHIR:   http://localhost:8081/openmrs/ws/...
+# Credentials: admin / Admin123
+```
+
+After building, deploy the OMOD into the running backend:
+
+```bash
+docker cp omod/target/cdshooks-omod-1.0.0-SNAPSHOT.omod \
+  cdshooks-dev-backend-1:/openmrs/data/modules/cdshooks-1.0.0-SNAPSHOT.omod
+docker restart cdshooks-dev-backend-1
+```
+
+`dev/docker-compose.snowstorm.yml` brings up a local Snowstorm terminology
+server for offline or write-access use; see its header for SNOMED release
+loading. See [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for
+the full walkthrough.
 
 ## Configuration
 
