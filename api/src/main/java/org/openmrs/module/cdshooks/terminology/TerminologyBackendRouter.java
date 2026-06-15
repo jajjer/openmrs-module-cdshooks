@@ -31,11 +31,12 @@ import java.util.List;
  * sources without a module restart:
  *
  * <ul>
- *   <li>{@code snowstorm} (default) — live FHIR {@code $lookup}/{@code $subsumes}
- *       against a Snowstorm-compatible server. Backward-compatible with the
- *       original behaviour.</li>
- *   <li>{@code referenceMap} — local {@code concept_reference_term_map} lookups
- *       only. No terminology server required.</li>
+ *   <li>{@code referenceMap} (default) — local {@code concept_reference_term_map}
+ *       lookups only (RxNORM CUI → RxClass NUI class edges). No terminology
+ *       server required. This is the primary, first-class matching path.</li>
+ *   <li>{@code snowstorm} — live FHIR {@code $lookup}/{@code $subsumes} against a
+ *       Snowstorm-compatible server, including the SNOMED finding/product
+ *       attribute bridge. A secondary "long-term completeness" path.</li>
  *   <li>{@code both} — ask the local reference map first; if it has no
  *       opinion (or says no), confirm against Snowstorm. Any positive
  *       (ancestry-indicating) answer from either source wins, because a missed
@@ -115,7 +116,7 @@ public class TerminologyBackendRouter implements TerminologyBackend {
     private Mode mode() {
         String configured = configuredBackend();
         if (configured == null || configured.isBlank()) {
-            return Mode.SNOWSTORM;
+            return Mode.REFERENCE_MAP;
         }
         switch (configured.trim().toLowerCase()) {
             case "referencemap":
@@ -127,16 +128,16 @@ public class TerminologyBackendRouter implements TerminologyBackend {
             case "snowstorm":
                 return Mode.SNOWSTORM;
             default:
-                log.warn("Unrecognised {} value '{}'; defaulting to snowstorm",
+                log.warn("Unrecognised {} value '{}'; defaulting to referenceMap",
                         CdsHooksConstants.GP_TERMINOLOGY_BACKEND, configured);
-                return Mode.SNOWSTORM;
+                return Mode.REFERENCE_MAP;
         }
     }
 
     /**
      * The raw {@code cdshooks.terminologyBackend} value. Package-private seam so
      * tests can drive mode selection without an OpenMRS service context. Read
-     * defensively; an unreadable property defaults to {@code snowstorm}.
+     * defensively; an unreadable property defaults to {@code referenceMap}.
      */
     String configuredBackend() {
         try {

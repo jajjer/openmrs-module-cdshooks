@@ -27,8 +27,11 @@ public final class CdsHooksConstants {
 
     /**
      * Selects the terminology source for parent-child / subsumption lookups:
-     * {@code snowstorm} (default, live FHIR), {@code referenceMap} (local
-     * {@code concept_reference_term_map}), or {@code both}.
+     * {@code referenceMap} (default — local {@code concept_reference_term_map},
+     * e.g. RxClass NUI ↔ RxNORM CUI class edges), {@code snowstorm} (live FHIR),
+     * or {@code both}. The reference-map path is the primary, first-class
+     * matcher; the SNOMED finding/product attribute bridge is a secondary,
+     * "long-term completeness" augmentation (see {@link #SCTID_CAUSATIVE_AGENT}).
      */
     public static final String GP_TERMINOLOGY_BACKEND = "cdshooks.terminologyBackend";
 
@@ -61,10 +64,19 @@ public final class CdsHooksConstants {
         DEFAULT_EXCLUDED_CLASS_CODES = Collections.unmodifiableSet(roots);
     }
 
-    /** SNOMED CT attribute: a finding's causative agent. */
+    /**
+     * SNOMED CT attribute: a finding's causative agent. Used only by the
+     * <em>secondary</em> SNOMED finding→substance bridge — the primary path is
+     * direct reference-code subsumption (RxNORM CUI → RxClass NUI). See
+     * {@code AllergyMatcherImpl}.
+     */
     public static final String SCTID_CAUSATIVE_AGENT = "246075003";
 
-    /** SNOMED CT attribute: a medicinal product's active ingredient. */
+    /**
+     * SNOMED CT attribute: a medicinal product's active ingredient. Used only by
+     * the <em>secondary</em> SNOMED product→substance bridge; see
+     * {@link #SCTID_CAUSATIVE_AGENT}.
+     */
     public static final String SCTID_HAS_ACTIVE_INGREDIENT = "127489000";
 
     /** CDS-Hooks service identifier for the drug-allergy alert. */

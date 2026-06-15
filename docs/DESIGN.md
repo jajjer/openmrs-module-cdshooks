@@ -24,9 +24,9 @@ curl -b cookies.txt -X POST http://localhost:8081/openmrs/ws/cds-services/drug-a
 # 200
 # {
 #   "cards": [{
-#     "summary": "⚠ Allergy to penicillin (class match)",
-#     "detail":  "Amoxicillin contains Amoxicillin (substance), which is a Penicillin —
-#                 the causative-agent class for Allergy to penicillin.
+#     "summary": "⚠ Allergy to penicillins (class match)",
+#     "detail":  "Amoxicillin is a Penicillins; the patient has a recorded
+#                 allergy to Penicillins.
 #                 Recorded reaction: Hepatotoxicity",
 #     "indicator": "critical",
 #     "source":  { "label": "OpenMRS Drug-Allergy Alert" }
@@ -35,12 +35,13 @@ curl -b cookies.txt -X POST http://localhost:8081/openmrs/ws/cds-services/drug-a
 # }
 ```
 
-The matching algorithm (`AllergyMatcherImpl`) bridges three SNOMED hierarchies via the `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID 127489000) attribute relationships, as described in the architecture section below.
+The matching algorithm (`AllergyMatcherImpl`) compares the drug's and allergen's terminology reference codes directly — the **primary** path resolves the class relationship from RxNORM CUI → RxClass NUI edges in `concept_reference_term_map` (amoxicillin *NARROWER-THAN* penicillins). A **secondary**, optional SNOMED CT bridge expands findings/products via the `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID 127489000) attributes for deployments with richer SNOMED modelling. See the architecture section below.
 
 **What's validated:**
 
 - ✅ CDS-Hooks 2.0 discovery + invocation work at the spec-compliant `/openmrs/ws/cds-services` URL
-- ✅ Cross-hierarchy SNOMED traversal correctly identifies Amoxicillin as a penicillin
+- ✅ Direct RxNORM CUI → RxClass NUI subsumption (via `concept_reference_term_map`) correctly identifies Amoxicillin as a penicillin
+- ✅ The optional SNOMED cross-hierarchy bridge reaches the same conclusion where the mappings exist
 - ✅ Severity → CDS-Hooks `indicator` mapping (SEVERE → critical) works
 - ✅ Module loads cleanly without modifying `openmrs-core`, `openmrs-module-fhir2`, or `esm-patient-medications-app`
 
@@ -88,20 +89,41 @@ The proposal here follows Andrew's direction: anchor drug and allergen concepts 
 
 ### Data model
 
-- Drug and allergen concepts in OpenMRS are mapped to SNOMED CT reference terms via `concept_reference_term_map` (SAME-AS or NARROWER-THAN).
-- Class hierarchy lives in SNOMED, not in OpenMRS. We query it through a Snowstorm instance over FHIR.
+- The allergens come from the patient's **drug allergen list**
+  (`patientService.getAllergies` → `Allergy.getAllergen().getCodedAllergen()`),
+  not from findings or conditions.
+- **Primary.** Drug and allergen concepts are mapped to RxNORM (ingredient CUI)
+  and RxClass (class NUI) reference terms. The drug→class hierarchy is loaded as
+  `NARROWER-THAN` / `BROADER-THAN` / `SAME-AS` edges in
+  `concept_reference_term_map` (RxClass publishes an explicit class-NUI ↔
+  ingredient-CUI relationship). The class hierarchy lives in the maintained
+  external terminology, not in hand-curated OpenMRS convenience sets.
+- **Secondary (optional).** Where a deployment prefers SNOMED CT, drug and
+  allergen concepts may instead/also carry SNOMED reference terms and the class
+  hierarchy is queried through a Snowstorm instance over FHIR.
 
 ### Matching algorithm
 
-A naive sketch would resolve the drug and allergen to SNOMED codes and call
-`$subsumes` directly. That does not work: allergen concepts map to the SNOMED
+**Primary — direct reference-code subsumption.** Given an ordered drug `D` and a
+patient's allergy list `A`, the matcher compares `D`'s reference codes against
+each allergy's reference codes directly:
+
+- **Ingredient match**: a drug code equals an allergen code.
+- **Class match**: an allergen *class* code subsumes a drug code — walked over
+  the `concept_reference_term_map` edges (RxNORM CUI → RxClass NUI), e.g.
+  amoxicillin (CUI) *NARROWER-THAN* penicillins (NUI). No terminology server
+  required.
+
+When both fire for the same allergen, both are surfaced.
+
+**Secondary — SNOMED finding/product bridge (optional, long-term completeness).**
+A naive SNOMED sketch — resolve drug and allergen to SNOMED codes and call
+`$subsumes` directly — does not work: allergen concepts map to the SNOMED
 *finding* hierarchy (e.g., "Allergy to penicillin (finding)") while drug
 concepts map to the *medicinal product* hierarchy. These trees are parallel, so
-a cross-hierarchy `$subsumes` returns `not-subsumed`. The algorithm has to
-bridge them via SNOMED attribute relationships, comparing like-to-like in the
-*substance* hierarchy.
-
-Given an ordered drug `D` and a patient's allergy list `A`:
+a cross-hierarchy `$subsumes` returns `not-subsumed`. When a Snowstorm backend
+is configured, the matcher therefore bridges them via SNOMED attribute
+relationships, comparing like-to-like in the *substance* hierarchy:
 
 1. Resolve `D` to its SNOMED product code(s), then `$lookup` each to read its
    `Has active ingredient` (SCTID 127489000) values — the substance(s) `D`
@@ -109,16 +131,16 @@ Given an ordered drug `D` and a patient's allergy list `A`:
 2. For each allergy `a` in `A`, resolve to its SNOMED finding code(s), then
    `$lookup` each to read its `Causative agent` (SCTID 246075003) values — the
    substance(s) the patient reacts to.
-3. For each (drug substance, allergen substance) pair, query Snowstorm:
-   - **Ingredient match**: the two substances are the same code.
-   - **Class match**: the drug substance is a descendant of the allergen
-     substance in the SNOMED `is-a` hierarchy (FHIR `$subsumes`, or ECL query) —
-     e.g., Amoxicillin *is-a* Penicillin.
-4. Return matches with `{ allergen, matchType: ingredient | class, severity, reaction, explanation }`.
+3. For each (drug substance, allergen substance) pair, `$subsumes` for
+   ingredient/class matches as above.
 
-The per-allergen and per-drug substance lookups are concept-level and rarely
-change, and `$subsumes` results are SNOMED-version-scoped — all three are cached
-(see `cdshooks.cacheTtlSeconds`) to keep per-order-add latency acceptable.
+These bridged substances are added to the same candidate comparison as the
+primary codes. As Andrew put it, "most people expect the drug allergen list, not
+findings… to be complete that would be a good long-term goal" — hence secondary.
+
+All lookups are concept-level and rarely change, and subsumption results are
+terminology-version-scoped — they are cached (see `cdshooks.cacheTtlSeconds`) to
+keep per-order-add latency acceptable.
 
 ### Where the logic lives
 

@@ -38,8 +38,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
- * Edge-case coverage for the matcher: multi-allergy, multi-ingredient,
- * equivalent-outcome, direct substance mapping, and dedup.
+ * Edge-case coverage for the matcher's <b>secondary</b> SNOMED finding/product
+ * attribute bridge: multi-allergy, multi-ingredient, equivalent-outcome, direct
+ * substance mapping, and dedup. The primary RxNORM CUI → RxClass NUI path is
+ * covered by {@link AllergyMatcherReferenceMapTest}.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class AllergyMatcherEdgeCasesTest {

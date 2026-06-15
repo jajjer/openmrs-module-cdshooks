@@ -35,9 +35,12 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Verifies the matcher produces the expected result for the worked example:
- * a patient with a penicillin allergy and an Amoxicillin order should produce
- * a CLASS match.
+ * Verifies the matcher produces the expected result for the worked example via
+ * the <b>secondary</b> SNOMED finding/product attribute bridge: a patient with a
+ * penicillin allergy (finding → Causative agent → substance) and an Amoxicillin
+ * order (product → Has active ingredient → substance) should produce a CLASS
+ * match. The primary RxNORM CUI → RxClass NUI path is covered by
+ * {@link AllergyMatcherReferenceMapTest}.
  */
 @RunWith(MockitoJUnitRunner.class)
 public class AllergyMatcherImplTest {

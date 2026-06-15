@@ -62,10 +62,12 @@ import java.util.concurrent.TimeUnit;
  * <h2>Attribute bridging</h2>
  * {@link #getAttributeValues(String, String)} returns empty: the reference-map
  * model has no equivalent of SNOMED's {@code Causative agent} /
- * {@code Has active ingredient} attribute relationships. The matcher's
- * include-self fallback ({@code AllergyMatcherImpl.expandToSubstances}) then
- * compares the drug and allergen codes directly via {@link #subsumes}, which
- * is exactly the CUI→NUI class lookup this backend is built for.
+ * {@code Has active ingredient} attribute relationships. The matcher compares
+ * the drug and allergen codes directly via {@link #subsumes} as its primary
+ * path ({@code AllergyMatcherImpl.expandCandidates} always includes the code
+ * itself), which is exactly the CUI→NUI class lookup this backend is built for;
+ * the empty attribute bridge just means no secondary SNOMED candidates are
+ * added.
  */
 @Component(ConceptReferenceTermMapBackend.BEAN_NAME)
 public class ConceptReferenceTermMapBackend implements TerminologyBackend {

@@ -39,6 +39,15 @@ import java.util.Set;
  * <p>Sources are matched by name token or HL7 code, case-insensitively, so the
  * common naming variants in CIEL and custom dictionaries ("SNOMED CT",
  * "SNOMED", "RxNORM", "RxCUI", "RxClass", "NUI") are all recognised.
+ *
+ * <p>TODO (SNOMED product specificity, Andrew Kanter's caveat): when a concept
+ * carries multiple SNOMED <em>product</em> codes, the specific product code (the
+ * one containing only the ingredient) should be preferred over the parent
+ * "drug-containing product", falling back to the parent only when no specific
+ * child map exists. Today {@link #extract} returns every recognised code flat.
+ * This is mostly a Phase-2 data-mapping concern (it governs which codes the
+ * SNOMED bridge expands) and does not affect the primary RxNORM/RxClass path, so
+ * it is flagged rather than implemented here.
  */
 @Component
 public class ReferenceCodeExtractor {
