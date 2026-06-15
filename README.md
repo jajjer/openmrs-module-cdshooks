@@ -47,9 +47,11 @@ hierarchy and the drug *product* hierarchy into the *substance* hierarchy via
 where SNOMED modelling is richer than the loaded reference-map edges; "to be
 complete that would be a good long-term goal," as Andrew put it.
 
-See [`docs/REFERENCE_MAP_BACKEND.md`](docs/REFERENCE_MAP_BACKEND.md) for the
-primary path, [`docs/DESIGN.md`](docs/DESIGN.md) for the full design proposal,
-and [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for
+New to the terminology? [`docs/TERMINOLOGY_PRIMER.md`](docs/TERMINOLOGY_PRIMER.md)
+explains SNOMED CT, RxNorm, RxClass, and CIEL from scratch, with diagrams of the
+two matching paths. See [`docs/REFERENCE_MAP_BACKEND.md`](docs/REFERENCE_MAP_BACKEND.md)
+for the primary path, [`docs/DESIGN.md`](docs/DESIGN.md) for the full design
+proposal, and [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md) for
 contributor notes (local setup, SNOMED modeling findings, and OpenMRS-platform
 gotchas).
 

@@ -7,6 +7,10 @@ secondary source. This is the "service which can use that knowledge to provide
 the parent-child links" he described, using the table that "is intended to
 capture hierarchies and other relationships between reference codes."
 
+> New to SNOMED CT / RxNorm / RxClass / CIEL and the two OpenMRS mapping tables?
+> Read [`TERMINOLOGY_PRIMER.md`](TERMINOLOGY_PRIMER.md) first — it explains the
+> coding systems from scratch with diagrams.
+
 ## Why
 
 The matcher originally led with a live Snowstorm instance over FHIR
