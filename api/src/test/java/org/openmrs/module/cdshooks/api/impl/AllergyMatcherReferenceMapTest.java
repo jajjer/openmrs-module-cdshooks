@@ -113,8 +113,7 @@ public class AllergyMatcherReferenceMapTest {
     public void bothIngredientAndClass_onOneAllergen() {
         // The allergen carries both the ingredient CUI and the class NUI, so the
         // drug matches it twice: once on ingredient (equal CUI) and once on
-        // class (NUI subsumes CUI). Andrew Kanter: the warning should surface
-        // both.
+        // class (NUI subsumes CUI). The warning should surface both.
         when(referenceMap.subsumes(eq(NUI_PENICILLINS), eq(CUI_AMOXICILLIN)))
                 .thenReturn(SubsumptionOutcome.SUBSUMES);
 

@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.is;
  * it exercises the subsumption walk against a real OpenMRS {@link ConceptService}
  * and the in-memory H2 schema, rather than mocks. This is the test that proves
  * the backend works against actual {@code concept_reference_term_map} persistence
- * — the RxClass NUI/CUI class edges Andrew Kanter asked for.
+ * — the RxClass NUI/CUI class edges the reference-map path relies on.
  *
  * <p>Builds its own fixture via the API (no fragile hardcoded standard-dataset
  * IDs): an RxNORM ingredient CUI mapped {@code NARROWER-THAN} an RxClass class

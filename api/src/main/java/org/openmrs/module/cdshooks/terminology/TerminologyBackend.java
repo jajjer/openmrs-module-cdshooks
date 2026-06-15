@@ -20,12 +20,12 @@ import java.util.List;
  * away from any single terminology server.
  *
  * <p>The matcher originally spoke only to a live Snowstorm instance over FHIR
- * ({@code $lookup} / {@code $subsumes}). Andrew Kanter's feedback on the Talk
- * thread pointed at a second, more OpenMRS-native source for the same
- * knowledge: the {@code concept_reference_term_map} table, which "is intended
- * to capture hierarchies and other relationships between reference codes" —
- * including the RxClass NUI ↔ RxNORM CUI class edges. Loading those edges
- * locally lets the parent-child lookup run without a live terminology server.
+ * ({@code $lookup} / {@code $subsumes}). A second, more OpenMRS-native source
+ * provides the same knowledge: the {@code concept_reference_term_map} table,
+ * which is intended to capture hierarchies and other relationships between
+ * reference codes — including the RxClass NUI ↔ RxNORM CUI class edges. Loading
+ * those edges locally lets the parent-child lookup run without a live
+ * terminology server.
  *
  * <p>This interface is the seam that lets a deployment choose either source
  * (or both) behind the same {@link org.openmrs.module.cdshooks.api.AllergyMatcher}.

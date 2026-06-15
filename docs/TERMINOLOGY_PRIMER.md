@@ -67,9 +67,8 @@ Identifier). RxClass is where you learn:
 RxCUI 723 (Amoxicillin, ingredient)  ──member-of──▶  NUI N0000175503 (Penicillins, class)
 ```
 
-That single edge powers a class match **without SNOMED at all**. Andrew Kanter's
-phrase *"the RxClass relationship between the NUI and the RxNORM CUI"* refers to
-exactly this.
+That single edge — the RxClass relationship between the NUI and the RxNORM CUI —
+powers a class match **without SNOMED at all**.
 
 ### CIEL
 *Columbia International eHealth Laboratory* dictionary — **not** a coding system
@@ -118,7 +117,7 @@ Both tables use **map types** to say what kind of relationship it is:
   NARROWER-THAN Penicillins.
 - **BROADER-THAN** — the reverse.
 
-Andrew's proposal in one sentence: **load the RxClass NUI↔CUI edges into
+The module's approach in one sentence: **load the RxClass NUI↔CUI edges into
 `concept_reference_term_map` as NARROWER-THAN rows, and have a service walk them
 to answer "is this drug a member of that class?"** That service is
 `ConceptReferenceTermMapBackend.subsumes()`.
@@ -184,16 +183,18 @@ Drug "Amoxicillin product"       (SNOMED product)
 ```
 
 Clinically complete, but depends on findings-style modelling, a running
-terminology server, and SNOMED coverage CIEL often lacks for drugs. Andrew:
-*"most people expect the drug allergen list, not findings/conditions… to be
-complete that'd be a good long-term goal."* Hence: secondary.
+terminology server, and SNOMED coverage CIEL often lacks for drugs. Most
+allergies are recorded against the drug allergen list rather than as
+findings/conditions, so this path is the longer-term completeness goal rather
+than the default. Hence: secondary.
 
 ### Ingredient match (the 1:1 floor, both paths)
 
 The simplest case — the patient is allergic to *Amoxicillin specifically* and
 Amoxicillin is ordered — is identical on both paths: the drug's code equals the
 allergen's code directly (`RxCUI 723 == RxCUI 723`). This is the minimal exact
-match Ian Bacher framed as the floor; class matching layers on top.
+match — the floor the feature was originally scoped to — and class matching
+layers on top.
 
 ```mermaid
 graph TD
