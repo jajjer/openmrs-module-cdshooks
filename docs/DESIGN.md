@@ -1,6 +1,6 @@
 # Design Proposal: Allergy / Rx Conflict Warning in O3
 
-Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. The discussion there surfaced some really helpful direction, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
+This is a design proposal for an allergy / Rx conflict warning in O3. It began from a "1:1 Allergy/Rx should trigger warning" requirement, but the feature turned out to be more interesting than that title suggests, so this document lays out the shape of the work before implementation. The open questions at the end collect the decisions still worth settling.
 
 ## Current Implementation Status
 
@@ -217,9 +217,9 @@ Each phase is its own PR (or small set of PRs).
 - **Migration friction.** Implementers using convenience sets today need a path forward. Mitigation: feature flag plus a clear migration guide.
 - **Licensing.** SNOMED licensing varies by country; need to confirm the distro-wide posture works for all target deployments.
 
-## Questions for the Community
+## Open Questions
 
-These are the calls I do not feel I should make alone. Feedback especially welcome here:
+These are decisions worth settling with OpenMRS maintainers before building out, rather than calling unilaterally:
 
 1. **Snowstorm hosting.** Does the RefApp ship with a default Snowstorm deployment, document a public instance to point at, or leave it entirely to the implementer?
 2. **SNOMED licensing.** Is the IHTSDO Member License coverage sufficient for the countries where the RefApp is deployed? Is there a country where this would block adoption?
@@ -230,4 +230,4 @@ These are the calls I do not feel I should make alone. Feedback especially welco
 7. **Backward compatibility** for implementers leaning on convenience sets today — what should the migration story look like?
 8. **Canonical SNOMED reference frame.** Which hierarchy is authoritative for CIEL drug and allergen concepts — finding, substance, or product? The matching algorithm's bridging steps depend on this; CIEL currently appears to map drugs to *product* and allergens to *finding*, which is why the algorithm traverses `Has active ingredient` and `Causative agent` to meet in the *substance* hierarchy. Best confirmed with the CIEL/terminology maintainers.
 
-Thanks for reading — and thanks to everyone on the thread for the framing that made this proposal possible. Looking forward to feedback before I start on Phase 1.
+These open questions are the gating items before Phase 1 begins; see the Phasing section above for how the work is sequenced.

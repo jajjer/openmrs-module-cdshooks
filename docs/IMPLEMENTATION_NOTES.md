@@ -90,10 +90,10 @@ read privileges it needs for the lookup.
 
 ## Status
 
-**Pre-community-review.** The design proposal in [`DESIGN.md`](DESIGN.md) has not
-yet been posted to OpenMRS Talk. The implementation here validates the
+**Pre-review.** The design proposal in [`DESIGN.md`](DESIGN.md) has not yet been
+reviewed by OpenMRS maintainers. The implementation here validates the
 architecture end-to-end; the final shape of a contributed module may shift based
-on community input on:
+on maintainer feedback on:
 
 - Hosting/packaging (new module vs. extending an existing one)
 - Which SNOMED reference frame is canonical for CIEL drug/allergen concepts
