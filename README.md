@@ -8,9 +8,8 @@ ingredient and on drug class.
 The allergens come from the patient's **drug allergen list**
 (`patientService.getAllergies`), not from findings/conditions, and drug→class
 relationships are resolved from **RxClass/RxNORM edges loaded into
-`concept_reference_term_map`** — the direction Andrew Kanter set on the Talk
-thread. A live SNOMED CT (Snowstorm) bridge is available as an optional,
-secondary path for long-term completeness.
+`concept_reference_term_map`**. A live SNOMED CT (Snowstorm) bridge is available
+as an optional, secondary path for long-term completeness.
 
 ## Architecture
 
@@ -44,8 +43,8 @@ backend is configured, the matcher additionally bridges the allergen *finding*
 hierarchy and the drug *product* hierarchy into the *substance* hierarchy via
 `Causative agent` (SCTID 246075003) and `Has active ingredient` (SCTID
 127489000), then runs substance × substance `$subsumes`. This adds coverage
-where SNOMED modelling is richer than the loaded reference-map edges; "to be
-complete that would be a good long-term goal," as Andrew put it.
+where SNOMED modelling is richer than the loaded reference-map edges — a
+longer-term completeness goal rather than the default path.
 
 New to the terminology? [`docs/TERMINOLOGY_PRIMER.md`](docs/TERMINOLOGY_PRIMER.md)
 explains SNOMED CT, RxNorm, RxClass, and CIEL from scratch, with diagrams of the
