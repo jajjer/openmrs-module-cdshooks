@@ -103,7 +103,7 @@ public class CdsAuditLoggerTest {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> drugs = (List<Map<String, Object>>) record.get("drugs");
         assertThat(drugs.size(), is(2));
-        assertThat(drugs.stream().map(d -> d.get("display")).toList(),
+        assertThat(drugs.stream().map(d -> d.get("display")).collect(java.util.stream.Collectors.toList()),
                 containsInAnyOrder("Amoxicillin", "Acetaminophen"));
     }
 }
