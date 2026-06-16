@@ -60,6 +60,18 @@ public class CdsServicesServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        // Invocation returns patient-specific allergy data, so it must be
+        // authenticated. The ForwardingFilter only opens a session for a valid
+        // Bearer token; session-cookie callers (the SPA) are bound by the core
+        // OpenmrsFilter. Anything that reaches here without an authenticated
+        // context is anonymous and must be rejected — otherwise a caller who
+        // knows a patient UUID could enumerate recorded allergies by probing
+        // drug codes. Discovery (doGet) stays public per the CDS-Hooks spec.
+        if (!isAuthenticated()) {
+            resp.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
+            return;
+        }
+
         String serviceId = lastPathSegment(req.getPathInfo());
         if (serviceId == null || serviceId.isEmpty() || "cdsServicesServlet".equals(serviceId)) {
             resp.sendError(HttpServletResponse.SC_BAD_REQUEST, "Service id required");
@@ -93,6 +105,16 @@ public class CdsServicesServlet extends HttpServlet {
     }
 
     /* -------------------- helpers -------------------- */
+
+    /**
+     * Whether the current request carries an authenticated OpenMRS context.
+     * Package-private and overridable so the auth gate can be unit-tested
+     * without spinning up an OpenMRS context (mirrors the seam exposed in
+     * {@code ForwardingFilter#verifyAndExtractSubject}).
+     */
+    boolean isAuthenticated() {
+        return Context.isAuthenticated();
+    }
 
     private void writeDiscovery(HttpServletResponse resp) throws IOException {
         Map<String, Object> service = new LinkedHashMap<>();
