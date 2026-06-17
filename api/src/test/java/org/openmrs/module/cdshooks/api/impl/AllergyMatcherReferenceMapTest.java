@@ -50,7 +50,7 @@ public class AllergyMatcherReferenceMapTest {
     // RxNORM ingredient CUIs and RxClass class NUIs (shapes, not live values).
     private static final String CUI_AMOXICILLIN = "723";
     private static final String CUI_CEFAZOLIN = "2180";
-    private static final String NUI_PENICILLINS = "N0000175503";
+    private static final String NUI_PENICILLINS = "N0000175497";
 
     @Mock
     private TerminologyBackend referenceMap;

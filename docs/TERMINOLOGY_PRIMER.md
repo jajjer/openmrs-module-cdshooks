@@ -30,7 +30,7 @@ them.
 |---|---|---|---|
 | **SNOMED CT** | Big multinational clinical ontology (findings, substances, products, …) with a built-in is-a hierarchy | **SCTID** (e.g. `27658006`) | Secondary "long-term completeness" path; needs a server (Snowstorm) |
 | **RxNorm** | US NLM normalized drug/ingredient vocabulary | **RxCUI** (e.g. `723`) | Drug/ingredient *identity* — the child node in a class match |
-| **RxClass** | NLM resource linking RxNorm drugs to drug *classes* | class **NUI** (e.g. `N0000175503`) | Where "Amoxicillin is a Penicillin" comes from |
+| **RxClass** | NLM resource linking RxNorm drugs to drug *classes* | class **NUI** (e.g. `N0000175497`) | Where "Amoxicillin is a Penicillin" comes from |
 | **CIEL** | The OpenMRS concept dictionary; maps its concepts out to all of the above | OpenMRS concept | The hub clinicians actually pick concepts from |
 
 ### SNOMED CT
@@ -64,7 +64,7 @@ class, MED-RT, VA…). Drug **classes** are identified by **NUI** (Name Unique
 Identifier). RxClass is where you learn:
 
 ```
-RxCUI 723 (Amoxicillin, ingredient)  ──member-of──▶  NUI N0000175503 (Penicillins, class)
+RxCUI 723 (Amoxicillin, ingredient)  ──member-of──▶  NUI N0000175497 (Penicillins, class)
 ```
 
 That single edge — the RxClass relationship between the NUI and the RxNORM CUI —
@@ -107,7 +107,7 @@ pulls out the SNOMED / RxNorm / RxClass codes.
 default path depends on:
 
 ```
-RxNORM 723 (Amoxicillin)  ──NARROWER-THAN──▶  RxClass N0000175503 (Penicillins)
+RxNORM 723 (Amoxicillin)  ──NARROWER-THAN──▶  RxClass N0000175497 (Penicillins)
 ```
 
 Both tables use **map types** to say what kind of relationship it is:
@@ -129,7 +129,7 @@ graph LR
     C["CIEL concept<br/>Amoxicillin"]
     RX["RxNORM 723<br/>(RxCUI)"]
     SN["SNOMED 27658006<br/>(SCTID)"]
-    NUI["RxClass N0000175503<br/>Penicillins (NUI)"]
+    NUI["RxClass N0000175497<br/>Penicillins (NUI)"]
 
     C -->|"SAME-AS<br/>(concept_reference_map)"| RX
     C -->|"SAME-AS<br/>(concept_reference_map)"| SN
@@ -152,10 +152,10 @@ Amoxicillin → warn* — two ways to get there.
 No server; everything is local in the OpenMRS database.
 
 ```
-Allergen "Allergy to penicillin" (CIEL) ──maps to──▶ RxClass NUI N0000175503 (Penicillins)
+Allergen "Allergy to penicillin" (CIEL) ──maps to──▶ RxClass NUI N0000175497 (Penicillins)
 Drug     "Amoxicillin"            (CIEL) ──maps to──▶ RxNORM CUI 723
                                                           │
-        walk concept_reference_term_map: is 723 NARROWER-THAN N0000175503?
+        walk concept_reference_term_map: is 723 NARROWER-THAN N0000175497?
                                                           │
                                                           ▼
                                                     yes → CLASS MATCH

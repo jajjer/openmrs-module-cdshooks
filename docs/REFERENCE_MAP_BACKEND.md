@@ -84,7 +84,7 @@ against the running distro):
 
 ```csv
 Source A,Code A,Map type,Source B,Code B
-RxNORM,723,NARROWER-THAN,RxClass,N0000175503   # amoxicillin → Penicillins
+RxNORM,723,NARROWER-THAN,RxClass,N0000175497   # amoxicillin → Penicillins
 RxNORM,2180,NARROWER-THAN,RxClass,N0000175561   # cefazolin  → Cephalosporins
 ```
 
