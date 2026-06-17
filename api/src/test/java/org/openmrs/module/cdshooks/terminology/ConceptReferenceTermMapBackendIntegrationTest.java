@@ -41,7 +41,7 @@ import static org.hamcrest.Matchers.is;
 public class ConceptReferenceTermMapBackendIntegrationTest extends BaseModuleContextSensitiveTest {
 
     private static final String CUI_AMOXICILLIN = "723";
-    private static final String NUI_PENICILLINS = "N0000175503";
+    private static final String NUI_PENICILLINS = "N0000175497";
 
     private ConceptReferenceTermMapBackend backend;
 

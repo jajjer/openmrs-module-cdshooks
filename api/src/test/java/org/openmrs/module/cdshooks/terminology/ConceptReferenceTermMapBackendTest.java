@@ -47,7 +47,7 @@ import static org.mockito.Mockito.when;
 public class ConceptReferenceTermMapBackendTest {
 
     private static final String CUI_AMOXICILLIN = "723";          // RxNORM ingredient CUI
-    private static final String NUI_PENICILLINS = "N0000175503";  // RxClass class NUI
+    private static final String NUI_PENICILLINS = "N0000175497";  // RxClass class NUI
     private static final String CUI_CEFAZOLIN = "2180";           // unrelated ingredient
     private static final String CUI_AMOXICILLIN_SNOMED = "372687004"; // a SAME-AS duplicate term
 

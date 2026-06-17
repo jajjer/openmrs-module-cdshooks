@@ -65,8 +65,8 @@ public class ReferenceCodeExtractorTest {
 
     @Test
     public void picksUpRxClassNui() {
-        Concept c = withMapping("RxClass", null, "N0000175503");
-        assertThat(extractor.extract(c), contains("N0000175503"));
+        Concept c = withMapping("RxClass", null, "N0000175497");
+        assertThat(extractor.extract(c), contains("N0000175497"));
     }
 
     @Test
