@@ -151,14 +151,18 @@ Amoxicillin → warn* — two ways to get there.
 
 No server; everything is local in the OpenMRS database.
 
-```
-Allergen "Allergy to penicillin" (CIEL) ──maps to──▶ RxClass NUI N0000175497 (Penicillins)
-Drug     "Amoxicillin"            (CIEL) ──maps to──▶ RxNORM CUI 723
-                                                          │
-        walk concept_reference_term_map: is 723 NARROWER-THAN N0000175497?
-                                                          │
-                                                          ▼
-                                                    yes → CLASS MATCH
+```mermaid
+flowchart TD
+    AL["Allergen<br/>'Allergy to penicillin' (CIEL)"]
+    DR["Drug<br/>'Amoxicillin' (CIEL)"]
+    AL -->|maps to| NUI["RxClass NUI N0000175497<br/>(Penicillins)"]
+    DR -->|maps to| CUI["RxNORM CUI 723<br/>(Amoxicillin)"]
+    NUI --> Q
+    CUI --> Q{"walk concept_reference_term_map:<br/>is 723 NARROWER-THAN N0000175497?"}
+    Q -->|yes| MATCH["CLASS MATCH"]
+
+    classDef hit fill:#dfd,stroke:#393;
+    class MATCH hit;
 ```
 
 Deterministic, offline, auditable, and uses the mapping CIEL most reliably has.
@@ -170,16 +174,18 @@ RxClass releases — see open questions in `REFERENCE_MAP_BACKEND.md`).
 Needs a live Snowstorm server. Bridges allergen *findings* and drug *products*
 to their substances, then asks SNOMED for subsumption.
 
-```
-Allergen "Allergy to penicillin" (SNOMED finding 91936005)
-    └─ Causative agent ───────▶ Penicillin (substance)
-Drug "Amoxicillin product"       (SNOMED product)
-    └─ Has active ingredient ──▶ Amoxicillin (substance)
-                                       │
-            ask Snowstorm: does Penicillin $subsumes Amoxicillin?
-                                       │
-                                       ▼
-                                 yes → CLASS MATCH
+```mermaid
+flowchart TD
+    AL["Allergen finding<br/>'Allergy to penicillin'<br/>(SNOMED 91936005)"]
+    DR["Drug product<br/>'Amoxicillin product'<br/>(SNOMED)"]
+    AL -->|"Causative agent"| PEN["Penicillin<br/>(substance)"]
+    DR -->|"Has active ingredient"| AMOX["Amoxicillin<br/>(substance)"]
+    PEN --> Q
+    AMOX --> Q{"ask Snowstorm:<br/>does Penicillin $subsumes Amoxicillin?"}
+    Q -->|yes| MATCH["CLASS MATCH"]
+
+    classDef hit fill:#dfd,stroke:#393;
+    class MATCH hit;
 ```
 
 Clinically complete, but depends on findings-style modelling, a running
