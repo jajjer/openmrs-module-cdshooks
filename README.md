@@ -13,19 +13,70 @@ as an optional, secondary path for long-term completeness.
 
 ## Architecture
 
+### Components
+
+How a request travels from the order basket down to a terminology lookup:
+
+```mermaid
+flowchart TD
+    FE["Frontend<br/>esm-cdshooks-app<br/>(medication order basket extension)"]
+    FE -->|"POST /ws/cds-services/drug-allergy"| FF
+
+    subgraph omod["omod &mdash; web layer"]
+        FF["ForwardingFilter<br/>/ws/cds-services → /ms/cdsServicesServlet<br/>+ optional Bearer-JWT auth"]
+        SV["CdsServicesServlet<br/>discovery (GET) · invoke (POST)<br/>rejects unauthenticated POST"]
+        FF --> SV
+    end
+
+    subgraph api["api &mdash; service layer"]
+        SVC["CdsHooksService<br/>load patient allergies ·<br/>group matches → Cards"]
+        MATCH["AllergyMatcher<br/>ingredient + class comparison"]
+        ROUTER["TerminologyBackendRouter<br/>(cdshooks.terminologyBackend)"]
+        SV --> SVC --> MATCH --> ROUTER
+    end
+
+    ROUTER -->|"default (primary)"| RM["ConceptReferenceTermMapBackend<br/>RxNORM CUI → RxClass NUI<br/>via concept_reference_term_map"]
+    ROUTER -->|"optional (secondary)"| SS["SnowstormClient (SNOMED CT)<br/>FHIR $lookup / $subsumes<br/>+ finding/product attribute bridge"]
+
+    classDef store fill:#eef,stroke:#557;
+    class RM,SS store;
 ```
-Frontend (esm-patient-chart)
-   │
-   │ POST /ws/cds-services/drug-allergy
-   ▼
-CdsServicesServlet  ──>  CdsHooksService  ──>  AllergyMatcher
-                                                    │
-                                                    ▼  TerminologyBackendRouter
-                          ┌─────────────────────────┴─────────────────────────┐
-              (default)   ▼                                                     ▼  (optional, secondary)
-     ConceptReferenceTermMapBackend                                   SnowstormClient (SNOMED CT)
-     RxNORM CUI → RxClass NUI                                         FHIR $lookup / $subsumes
-     via concept_reference_term_map                                   + finding/product attribute bridge
+
+### Request lifecycle
+
+What happens on a single invocation, including the auth gate and the fail-open
+fallback:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Frontend (order basket)
+    participant FF as ForwardingFilter
+    participant SV as CdsServicesServlet
+    participant SVC as CdsHooksServiceImpl
+    participant PS as PatientService
+    participant M as AllergyMatcher
+    participant T as TerminologyBackendRouter
+
+    FE->>FF: POST /ws/cds-services/drug-allergy
+    Note over FF: Bearer JWT? verify + open session.<br/>Session-cookie callers (SPA) pass<br/>through to core OpenmrsFilter.
+    FF->>SV: forward → /ms/cdsServicesServlet/drug-allergy
+    alt request is anonymous
+        SV-->>FE: 401 Unauthorized
+    else authenticated
+        SV->>SVC: evaluateDrugAllergy(request)
+        SVC->>PS: getPatientByUuid + getAllergies
+        PS-->>SVC: coded allergens (+ severity, reaction)
+        loop each ordered drug × each recorded allergen
+            SVC->>M: match(drug, allergies)
+            M->>T: subsumes / getAttributeValues
+            T-->>M: ingredient · class · no match
+        end
+        M-->>SVC: matches
+        Note over SVC: group by allergen → Cards<br/>(worst severity → indicator).<br/>On error: fail-open<br/>"check unavailable" info Card.
+        SVC-->>SV: CdsHooksResponse
+        SV-->>FE: 200 { cards: [...] }
+    end
 ```
 
 **Primary path — RxClass/RxNORM via `concept_reference_term_map`.** Drug and
