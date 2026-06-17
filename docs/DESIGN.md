@@ -1,6 +1,6 @@
 # Design Proposal: Allergy / Rx Conflict Warning in O3
 
-Hi all — following up on the Talk thread about the "1:1 Allergy/Rx should trigger warning" ticket. The discussion there surfaced some really helpful direction, and the feature turned out to be more interesting than the ticket title suggests, so I've put together a design proposal to make sure I understand the shape of the work before writing code. Feedback very welcome — particularly on the open questions at the end.
+This document proposes a design for warning clinicians when a medication they are about to prescribe conflicts with a patient's recorded allergy. It captures the shape of the work — the architecture, the key technical choices, and their trade-offs — before implementation. Open questions that still need a decision are collected at the end.
 
 ## Current Implementation Status
 
